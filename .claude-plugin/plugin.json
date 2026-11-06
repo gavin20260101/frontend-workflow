@@ -1,0 +1,27 @@
+{
+  "name": "req-workflow",
+  "description": "前端工作流：需求方案、行为改动测试先失败后实现、移动端浏览器验证、埋点与测试服安全、前端专项审核。可独立使用，也可补充 Superpowers 计划并复用其 TDD 与任务执行流程。缺陷先复现、找根因并验证回归测试；/req-test 用于独立测试已有功能，/req-parallel 管理多个 worktree。",
+  "version": "2.9.0",
+  "author": {
+    "name": "gavin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "requirements",
+    "workflow",
+    "frontend",
+    "testing",
+    "e2e",
+    "playwright",
+    "code-review"
+  ],
+  "userConfig": {
+    "context7_api_key": {
+      "type": "string",
+      "title": "Context7 API key（可选）",
+      "description": "在 context7.com 免费申请，用于提高查询文档的调用额度。留空则匿名使用。保存在系统钥匙串中，不写入插件文件或 settings.json。",
+      "sensitive": true,
+      "default": ""
+    }
+  }
+}

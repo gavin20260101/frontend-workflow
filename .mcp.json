@@ -1,0 +1,75 @@
+{
+  "mcpServers": {
+    "browser-ios": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--browser", "webkit",
+        "--device", "iPhone 15",
+        "--headless",
+        "--isolated",
+        "--caps", "network,storage,testing",
+        "--console-level", "warning",
+        "--output-dir", "docs/plans/browser-artifacts"
+      ]
+    },
+    "browser-android": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--browser", "chrome",
+        "--device", "Pixel 7",
+        "--headless",
+        "--isolated",
+        "--caps", "network,storage,testing",
+        "--console-level", "warning",
+        "--output-dir", "docs/plans/browser-artifacts"
+      ]
+    },
+    "browser-chrome": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--browser", "chrome",
+        "--device", "Pixel 7",
+        "--caps", "network,storage,testing",
+        "--console-level", "warning",
+        "--output-dir", "docs/plans/browser-artifacts"
+      ]
+    },
+    "browser-user-chrome": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--extension",
+        "--caps", "network,testing",
+        "--console-level", "warning",
+        "--output-dir", "docs/plans/browser-artifacts"
+      ]
+    },
+    "browser-perf": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@1.11.0",
+        "--headless",
+        "--isolated",
+        "--memoryDebugging",
+        "--redactNetworkHeaders",
+        "--performanceCrux=false",
+        "--usageStatistics=false"
+      ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.context7_api_key}"
+      }
+    }
+  }
+}
