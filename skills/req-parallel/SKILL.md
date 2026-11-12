@@ -17,7 +17,7 @@ disable-model-invocation: true
 
 ## 规划模式
 
-worktree 的创建权由 `/req-parallel` 负责。每个 worktree 中可以使用 Superpowers 执行该任务的实施计划，但不要再调用 `superpowers:using-git-worktrees` 为同一任务创建第二个工作区。`subagent-driven-development` 可在当前 worktree 内拆分计划任务；不要与 `/req-parallel` 对同一批独立需求重复并行拆分。
+worktree 的创建权由 `/req-parallel` 负责。每个 worktree 中用 `/req-implement` 执行该任务的计划（可以是 Superpowers 计划），不要再调用 `superpowers:using-git-worktrees` 为同一任务创建第二个工作区，也不要再用 Superpowers 的执行技能拆分同一份计划。
 
 ### 1. 理解每个任务
 

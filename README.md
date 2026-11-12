@@ -6,7 +6,7 @@ A Claude Code plugin for a plan-first frontend workflow: analyze a requirement i
 
 ## 与 Superpowers 配合
 
-Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；frontend-workflow 补充前端验收、移动端浏览器验证、埋点、弱网与测试服数据保护。两个插件分别安装，不复制或维护 Superpowers 的技能文件。Claude Code 官方市场的安装命令是：
+Superpowers 负责通用的设计澄清和实施计划；frontend-workflow 补充前端验收、移动端浏览器验证、埋点、弱网与测试服数据保护，并负责执行计划。两个插件分别安装，不复制或维护 Superpowers 的技能文件。Claude Code 官方市场的安装命令是：
 
 ```text
 /plugin install superpowers@claude-plugins-official
@@ -16,12 +16,14 @@ Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；f
 
 1. 使用 `/superpowers:brainstorming` 澄清需求。设计批准后，使用 `/superpowers:using-git-worktrees` 建立工作区，再由 `/superpowers:writing-plans` 生成实施计划草稿。
 2. 在最终批准计划前，调用 `/req-analysis docs/superpowers/plans/<计划文件>.md`。它会把前端补充写回同一计划，不生成第二份方案。计划应包含适用的 AC、UI 状态、响应式与无障碍要求、测试映射、具体风险和回滚方式。
-3. 审阅整份计划后，直接运行 `/req-implement <计划文件路径>`，运行即视为批准。实现按逐任务的 RED-GREEN TDD 执行；多任务计划可选 Superpowers 的 `subagent-driven-development`，单线计划用 `executing-plans`。两套流程不叠加：Superpowers 执行技能负责任务顺序、实现和进度记录；测试由谁写和验证、审核几次、修复后是否复审，以 `/req-implement` 为准。
-4. frontend-workflow 继续执行移动端浏览器验证、测试服安全规则和代码审核：用 `executing-plans` 时由 `req-code-reviewer` 做一次完整审核；用 `subagent-driven-development` 时，Superpowers 已做通用审核，`req-code-reviewer` 只做前端专项审核。
+3. 审阅整份计划后，直接运行 `/req-implement <计划文件路径>`，运行即视为批准。执行只用 `/req-implement` 一套流程：不再加载 Superpowers 的 `executing-plans`、`subagent-driven-development`、`test-driven-development`，Superpowers 计划只作为任务清单和设计依据。
+4. `/req-implement` 完成实现、测试、移动端浏览器验证和一次完整代码审核。
+
+用 `writing-plans` 写计划时，建议只写到“改哪些文件、验收标准、验证命令、不做什么”，不逐行写代码：代码级步骤写得越细，计划越长，实现时也常要按仓库实际情况改。
 
 改 bug 时继续用 `/req-bugfix` 复现问题并追踪根因；遇到复杂或反复失败的问题可配合 `systematic-debugging`。`/req-test` 用于独立测试已经实现的功能，仍按测试任务运行。
 
-避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。Superpowers 的实施子代理可以改业务代码，`code-reviewer` 受钩子只读限制；frontend-workflow 钩子会继续限制自己的 `req-*` 子代理。
+避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。`/req-implement` 不使用 Superpowers 的实施和审核子代理；你在流程之外单独使用 Superpowers 的 `code-reviewer` 时，它仍受钩子只读限制。
 
 Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-analysis`，再按原方式运行 `/req-implement`。如果提供的是 Superpowers 计划路径，则 `/req-analysis` 只补充该计划。
 
@@ -34,11 +36,12 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
    - 测试方案按层次组织：每条验收标准由哪一层验证（单元 / 组件 / 浏览器功能 / 真机手工），每层具体到用例。
 2. `/req-implement <方案文件路径>`（需求方案、缺陷修复方案或已批准的 Superpowers 计划都可执行）
    - 检查方案是否完整、代码是否偏离方案，记录实现基准（当前提交号）。
-   - 主代理实现业务代码；命中高风险区域的文件，在开工前的执行确认里一次列出改动要点，请你确认，实现中超出这些要点时再停下。
-   - 每个行为改动先由 `req-test-runner` 按主代理写的任务简报对计划中适用的单元、组件用例做 RED（已有 E2E 框架时由 `req-browser-tester` 做 E2E 用例的 RED），再写业务代码；实现后主代理自己对同一批用例做 GREEN，并核对测试没有被改动；全部任务完成后由 `req-test-runner` 做一次完整检查。手工浏览器验证保留实现前后的对照步骤。
+   - 开工前输出执行确认。只有命中高风险区域、有会让实现中途停下的事项、有按假设处理的条目或需要你协助时才停下等你确认，其余情况直接开始。
+   - 测试先行按风险分：业务行为、出错和兜底路径、缺陷回归“先写测试”——由 `req-test-runner` 按任务简报做 RED（相邻的独立任务合并成一次），主代理实现后自己做 GREEN 并核对测试没被改动；骨架、配置、构建与检查脚本、样式等“实现后补测试”——主代理先实现，再由 `req-test-runner` 一次补齐测试。已有 E2E 框架时由 `req-browser-tester` 做 E2E 用例的 RED。
+   - 每个任务归哪一类，按 `references/test-first-scope.md` 的定义：方案里标注过的按标注执行，不能把“先写测试”改成“实现后补测试”；审核员会核对归类。
+   - 全部任务完成后，主代理自己把检查命令完整运行一次；之后每次修改业务代码，也由主代理自己重跑。有测试问题或归因拿不准时才派 `req-test-runner`。
    - `req-browser-tester` 子代理在本次改动涉及的支持平台上打开真实页面，核对页面状态、控制台报错、失败请求、横向溢出、点击区域和埋点请求；核心页面还可以做性能与弱网检查。开始前会请你启动本地页面。
-   - L2 及以上的改动，在第一轮审核前由 `silent-failure-hunter`、`pr-test-analyzer` 做专项检查（需要安装官方插件 pr-review-toolkit，没装就跳过）。
-   - `req-code-reviewer` 子代理只读审核，最多 3 轮；只有修复了阻断项或有异议时才进入下一轮，下一轮只复核上一轮的问题和修复涉及的文件。专项检查的意见由它逐条核实后再决定是否采纳。
+   - `req-code-reviewer` 子代理只读审核，包括静默失败和测试覆盖缺口，不再另派其他审核代理；最多 2 轮，只有修复了阻断项或有异议时才进入下一轮，下一轮只复核上一轮的问题和修复涉及的文件。调用时明确要求，才在审核前加做 pr-review-toolkit 的专项检查。
    - 分析和实现中涉及第三方库的 API 时，先用 Context7 查询项目所用版本的文档。
    - 输出测试与审核报告，并追加到方案文件末尾，其中包括浏览器模拟覆盖不到、需要在真机上验证的手工测试步骤。不会自动提交代码。
 
@@ -134,7 +137,8 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 钩子 | `hooks/guard-subagents.mjs` | 强制执行上面四个子代理的权限边界 |
 | 参考 | `references/plan-review.md` | 调用方案审核员和处理审核意见的统一流程，供 `req-analysis`、`req-bugfix` 引用 |
 | 参考 | `references/frontend-quality-supplement.md` | 将前端验收、UI 状态、响应式、无障碍和测试映射补入同一份计划 |
-| 外部子代理（可选） | `pr-review-toolkit:silent-failure-hunter`、`pr-review-toolkit:pr-test-analyzer` | 审核前的专项检查：被吞掉的错误和缺失的失败处理、测试覆盖缺口 |
+| 参考 | `references/test-first-scope.md` | “先写测试”和“实现后补测试”的定义，供 `req-analysis`、`req-implement` 引用 |
+| 外部子代理（可选） | `pr-review-toolkit:silent-failure-hunter`、`pr-review-toolkit:pr-test-analyzer` | 只在调用 `/req-implement` 时明确要求才用：审核前的专项检查 |
 
 ## 项目规则（可选，推荐）
 
@@ -189,13 +193,13 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 需求分析、写方案 | 主会话 | 主会话当前模型 | 主会话设置 |
 | 方案审核 | `req-plan-reviewer` | Fable（`fable`） | high |
 | 写业务代码 | 主会话 | 主会话当前模型；建议把会话模型设为 Opus 5.5 | 主会话设置 |
-| 单元、组件测试 | `req-test-runner` | Opus（`opus`） | 默认 |
-| 浏览器功能测试 | `req-browser-tester` | Opus（`opus`） | 默认 |
+| 单元、组件测试 | `req-test-runner` | Sonnet（`sonnet`） | 默认 |
+| 浏览器功能测试 | `req-browser-tester` | Sonnet（`sonnet`） | 默认 |
 | 代码审核 | `req-code-reviewer` | Fable（`fable`） | high |
 
-- 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5）。需要固定版本时改成完整模型 ID，如 `claude-opus-5-5`。
+- 写测试、跑命令、按用例操作浏览器用 Sonnet；判断方案和代码对不对的两个审核员用 Fable。任务要改的文件命中高风险区域时，`/req-implement` 调用 `req-test-runner` 写测试会临时指定 Opus。测试子代理的结果不准时，可以把对应文件的 `model` 改回 `opus`。
+- 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。
 - 账号无法使用 Fable 时，方案审核会跳过并在输出中注明；代码审核会调用失败，需要把 `req-code-reviewer.md` 的 `model` 改为 `opus` 或删掉这一行（跟随主会话）。
-- 使用 Superpowers 的 `subagent-driven-development` 时，它的实施和审核子代理的模型由 Superpowers 决定，不受这里的设置影响。
 
 ## 子代理守卫钩子
 
@@ -233,8 +237,8 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 3. 重新加载插件（`/reload-plugins`）或开启新会话后生效。
 
 key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文件、`settings.json` 或项目仓库。插件在 `.mcp.json` 中只引用 `${user_config.context7_api_key}`，连接时作为 `Authorization: Bearer` 请求头发送给 Context7。留空时发送的是空的 Bearer 请求头，Context7 会按匿名访问处理。
-- 可选：官方插件 pr-review-toolkit（在插件市场 claude-plugins-official 中），用于审核前的专项检查。未安装时跳过这一步。
-- 可选：[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) 插件中的 `karpathy-guidelines` 技能。未安装时，`/req-implement` 按内置的同类原则执行。
+- 可选：官方插件 pr-review-toolkit（在插件市场 claude-plugins-official 中），只在调用 `/req-implement` 时明确要求专项检查才用到。
+- `/req-implement` 不再加载 karpathy-guidelines，“最少代码、不顺手重构”的原则已写在技能里。
 
 ## 方案文件
 
@@ -253,6 +257,8 @@ key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文�
 - 浏览器功能测试的格式（方式、环境、设备与浏览器服务、通用检查、性能与弱网检查）
 - 保存方案文件（git exclude 判断、状态、结束语）
 - 并行工作区（worktree）的进入和环境检查
+
+“先写测试 / 实现后补测试”的定义在 `references/test-first-scope.md`。子代理读不到这个文件，所以 `req-code-reviewer` 和 `req-plan-reviewer` 的检查清单里各有一条简短的归类核对；修改定义时这两处要同步。
 
 ## 安装
 
