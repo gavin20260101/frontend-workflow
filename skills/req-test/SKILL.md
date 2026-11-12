@@ -13,6 +13,8 @@ disable-model-invocation: true
 
 分工：你（主代理）负责理解需求、编写测试方案、协调流程、确认缺陷和输出报告；req-test-runner 子代理负责编写单元测试和组件测试并运行检查命令；req-browser-tester 子代理负责浏览器功能测试和缺陷复现。这两个子代理由本插件提供，在可用代理列表中显示为 `<插件名>:req-test-runner` 和 `<插件名>:req-browser-tester`；调用时使用这个带插件名的完整名称。你不直接编辑测试文件，不自己运行检查命令来代替 req-test-runner，也不自己操作浏览器来代替 req-browser-tester。你可以阅读代码来确认缺陷。子代理都看不到本次对话，调用时必须把它们需要的信息写全。
 
+本命令自带完整的测试流程，不加载 `superpowers:test-driven-development`、`superpowers:verification-before-completion` 和 karpathy-guidelines。这里测的是已经实现的代码，TDD 的“先写测试再实现、先写的代码要删掉”不适用；完成标准以本技能各步骤为准。第五步定位疑似代码位置时，原因不清或调用链复杂的缺陷可以使用 `superpowers:systematic-debugging`（可用时）查根因，但只定位，不修复。
+
 你写入的文件只有：测试方案文件（docs/plans/ 下），以及“保存测试方案文件”一节中说明的本机 git exclude 文件。
 
 下文的“项目规则”指项目中的 CLAUDE.md 和 CLAUDE.local.md（存在时）。

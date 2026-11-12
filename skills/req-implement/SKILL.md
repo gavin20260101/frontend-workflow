@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 只用本技能这一套流程。输入是 Superpowers 计划时，计划只作为任务清单和设计依据：不加载 `superpowers:executing-plans`、`superpowers:subagent-driven-development`、`superpowers:test-driven-development`、`superpowers:verification-before-completion`，也不加载 karpathy-guidelines。用户调用本命令，即表示明确要求本次不使用这些技能。任务顺序、测试先行的范围、测试由谁写和验证、审核几轮，都按本技能。只有同一个问题修了一次仍失败、或根因不清时，才使用 `superpowers:systematic-debugging`（可用时）。
 
-计划中逐行写好的代码只作参考：实现时以计划的文件、验收标准和“不做什么”为准，代码按当前仓库的实际情况写。
+计划中逐行写好的代码只作参考：实现时以计划的文件、验收标准和“不做什么”为准，代码按当前仓库的实际情况写。计划头部的 REQUIRED SUB-SKILL 说明和各任务里的 `git commit` 步骤都不执行：执行方式以本技能为准，提交只在第六步用户要求时进行。实现和审核过程中，也不要主动调用 `pr-review-toolkit:code-simplifier` 这类会改代码的代理，否则会改动审核员已经审过的代码。
 
 下文的“项目规则”指项目中的 CLAUDE.md 和 CLAUDE.local.md（存在时）。
 

@@ -19,6 +19,8 @@ disable-model-invocation: true
 
 独立模式也应按 `references/frontend-quality-supplement.md` 考虑本次改动相关的 UI 状态、响应式断点、键盘与焦点、语义标签和既有设计系统；把适用项写入下方已有的验收、兼容和测试章节，不另造一份计划。
 
+独立模式下不调用 `superpowers:brainstorming`、`superpowers:writing-plans`：需求澄清由阶段一的待确认事项完成，方案由阶段二产出并经 req-plan-reviewer 审核；再走那两个技能会生成重复文档，并且会跳过方案审核。
+
 ## Superpowers 计划补充模式
 
 当输入是 Superpowers 的实施计划路径（通常位于 `docs/superpowers/plans/`；文件包含 Superpowers 的 Implementation Plan 结构和任务清单）时，直接进入补充模式，不重新做一份需求方案：
@@ -28,7 +30,7 @@ disable-model-invocation: true
    - 计划不改页面或交互（如构建、检查规则、配置、工具脚本）时，只写 AC 到验证方式的映射和第 4 点的 D 编号事项，UI 状态、响应式、无障碍、浏览器测试写一行“不适用”。
    - 计划正文已经写清的内容不重复；不补写代码级步骤；不加需求和项目规则没有要求的体验增强、防御性设计和通用化，确实值得做的列为“可选，默认不做”。
    - 读取 `references/test-first-scope.md`，按其中的定义给每个任务标注实现时“先写测试”还是“实现后补测试”。
-3. 把内容追加或更新在同一文件的 `## Frontend quality supplement (frontend-workflow)` 章节中。只修改该章节。计划中已有旧插件名下的 `## Frontend quality supplement (req-workflow)` 章节时，把它当作同一章节更新，并把标题改为新名称。
+3. 把内容追加或更新在同一文件的 `## Frontend quality supplement (frontend-workflow)` 章节中。只修改该章节。计划中已有旧插件名下的 `## Frontend quality supplement (req-workflow)` 章节时，把它当作同一章节更新，并把标题改为新名称。计划头部写着用 subagent-driven-development 或 executing-plans 执行时，在补充章节开头写一行“执行方式：运行 `/req-implement <计划路径>`（替代计划头部的 REQUIRED SUB-SKILL 说明）”，避免之后读到这份计划的会话绕过本流程的测试和审核。
 4. 逐个任务把计划要改的文件与项目规则中的高风险区域清单和规则配置文件对照，并检查计划步骤是否与项目规则冲突。把实现时会需要用户确认的事项一次列全：高风险文件的改动要点、计划步骤与项目规则冲突的地方、规则或配置范围需要扩大的地方。每项写明涉及的任务、原因和建议做法，编为 D 编号，一并放进未决问题。
 5. 补充章节写好后，按 `references/plan-review.md` 调用 req-plan-reviewer 审核整份计划（方案类型为“Superpowers 计划补充”），处理意见；补充章节中已有“方案审核记录”且用户没有要求重新审核时跳过。
 6. 输出新增或更新摘要、未决问题、计划文件路径，以及实际打开的项目文件、执行的搜索和查询的第三方文档。未决问题会改变需求或方案时先停下；用户答复后，把答复写进补充章节，不再单独问是否批准。结束时说明：“请审阅完整计划（含前端补充）。确认后直接运行 `/req-implement <计划路径>`，运行即视为批准计划和前端补充。”

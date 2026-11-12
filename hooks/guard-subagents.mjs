@@ -1,4 +1,4 @@
-// PreToolUse 钩子：req-code-reviewer、req-plan-reviewer 和 Superpowers code-reviewer 只读；req-test-runner 和 req-browser-tester 只改测试文件、只运行已有脚本；
+// PreToolUse 钩子：req-code-reviewer、req-plan-reviewer 和任何名为 code-reviewer 的代理（目前是 pr-review-toolkit:code-reviewer；Superpowers 7.x 已不再自带代理）只读；req-test-runner 和 req-browser-tester 只改测试文件、只运行已有脚本；
 // req-browser-tester 只能使用插件自带的浏览器服务，不能关闭用户 Chrome 中的标签页，浏览器工具只能把文件写到截图目录或临时目录。
 // 主会话和其他代理的调用一律放行。拦截时以退出码 2 结束，stderr 的内容会返回给子代理。
 // 这是防误操作的护栏，不是沙箱。

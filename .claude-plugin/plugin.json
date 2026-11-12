@@ -1,7 +1,7 @@
 {
   "name": "frontend-workflow",
   "description": "前端工作流：需求方案、业务行为和出错路径先写失败测试再实现、移动端浏览器验证、埋点与测试服安全、前端专项审核。可独立使用，也可补充并执行 Superpowers 计划（执行只用本插件一套流程）。缺陷先复现、找根因并验证回归测试；/req-test 用于独立测试已有功能，/req-parallel 管理多个 worktree。",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "author": {
     "name": "gavin"
   },
