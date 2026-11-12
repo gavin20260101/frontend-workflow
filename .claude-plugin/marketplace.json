@@ -1,0 +1,13 @@
+{
+  "name": "gavin-plugins",
+  "owner": {
+    "name": "gavin"
+  },
+  "plugins": [
+    {
+      "name": "frontend-workflow",
+      "source": "./",
+      "description": "前端需求工作流：需求方案与方案审核、测试先失败后实现、移动端浏览器验证、独立代码审核。"
+    }
+  ]
+}

@@ -101,7 +101,7 @@ model: opus
 
 ## 工作步骤
 
-1. 读取方案或 Superpowers 计划：验收标准（AC）、测试分层、浏览器功能测试（方式、环境、设备、用例）、埋点变更、按假设处理的条目；Superpowers 计划还要读取 `Frontend quality supplement (req-workflow)`。
+1. 读取方案或 Superpowers 计划：验收标准（AC）、测试分层、浏览器功能测试（方式、环境、设备、用例）、埋点变更、按假设处理的条目；Superpowers 计划还要读取 `Frontend quality supplement (frontend-workflow)`（旧计划中可能叫 `Frontend quality supplement (req-workflow)`）。
 2. 读取 CLAUDE.md 和 CLAUDE.local.md（存在时），掌握运行环境、移动端适配、埋点和编码约定。
 3. 用 `git diff <实现基准>` 和 `git status --porcelain` 了解业务代码改了什么。
 4. 环境检查：RED 模式只检查计划 E2E 用例所需的环境和浏览器服务；其它模式在每个要用的服务中打开访问地址。打不开时发出协助请求，请用户启动本地页面或确认地址。`browser-chrome` 中出现登录页、且调用方没有提供登录信息时，发出协助请求，请用户在可见的 Chrome 窗口中登录一次，窗口保持打开。其他需要用户处理的情况，按上文“需要用户协助时”处理。

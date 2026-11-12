@@ -64,7 +64,7 @@ model: opus
 
 ## 工作步骤
 
-1. 有任务简报时，先读简报，再只读取简报中引用的计划段落和文件；简报缺少完成任务所需的信息时，再到计划中查找对应部分，不要通读整份计划。没有简报时，读取方案或 Superpowers 计划：验收标准（AC）、测试现状、测试方案（具体用例）、检查命令、“不做什么”、按假设处理的条目；Superpowers 计划还要读取 `Frontend quality supplement (req-workflow)`。
+1. 有任务简报时，先读简报，再只读取简报中引用的计划段落和文件；简报缺少完成任务所需的信息时，再到计划中查找对应部分，不要通读整份计划。没有简报时，读取方案或 Superpowers 计划：验收标准（AC）、测试现状、测试方案（具体用例）、检查命令、“不做什么”、按假设处理的条目；Superpowers 计划还要读取 `Frontend quality supplement (frontend-workflow)`（旧计划中可能叫 `Frontend quality supplement (req-workflow)`）。
 2. 读取 CLAUDE.md 和 CLAUDE.local.md（存在时）。
 3. 用 `git diff <实现基准>` 和 `git status --porcelain` 查看当前改动，理解业务代码改了什么。“实现前已有改动”的文件和调用方提供的当前计划文件不属于本次改动。实现基准为“无”时，按调用方提供的业务文件清单阅读。
 4. 编写或修正测试（按模式；“仅运行”模式跳过）：

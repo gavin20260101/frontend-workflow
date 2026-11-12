@@ -36,7 +36,7 @@ effort: high
 
 ## 审核步骤
 
-1. 读取方案或计划文件。独立方案需掌握类型、AC、修改文件、非目标、埋点、测试方案、风险和假设；缺陷修复还要掌握复现、根因、影响范围和 RED 证据。Superpowers 计划需掌握引用的设计文档、任务、`Frontend quality supplement (req-workflow)` 和实现记录。
+1. 读取方案或计划文件。独立方案需掌握类型、AC、修改文件、非目标、埋点、测试方案、风险和假设；缺陷修复还要掌握复现、根因、影响范围和 RED 证据。Superpowers 计划需掌握引用的设计文档、任务、`Frontend quality supplement (frontend-workflow)`（旧计划中可能叫 `Frontend quality supplement (req-workflow)`） 和实现记录。
 2. 读取 CLAUDE.md 和 CLAUDE.local.md（存在时），掌握编码规范、高风险区域、运行环境和证据等级规则。项目规则没有定义证据等级时，使用默认定义：A = 打开文件看到了代码（附路径 + 行号）；B = 推断（写明依据和缺失的环节）；C = 代码中无法确定，需要向人确认。
 3. 收集全部改动：
    - 用 `git diff <实现基准> --stat` 和 `git diff <实现基准>` 查看已跟踪文件的改动（包括尚未提交的部分）；

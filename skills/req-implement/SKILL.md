@@ -44,7 +44,7 @@ disable-model-invocation: true
 1. 没有提供路径时，列出 `docs/plans/` 与 `docs/superpowers/plans/` 下最近的几个方案文件，请用户指定，然后停下。
 2. 读取计划并识别格式：
    - 独立方案：按既有要求检查状态、验收标准、待确认事项及答复、风险等级、修改文件、测试方案、检查命令和回滚方式；缺陷修复方案还要包含复现结论、根因和回归测试。
-   - Superpowers 计划：检查任务清单、每项的文件和验证步骤，以及 `Frontend quality supplement (req-workflow)` 章节。缺少前端补充时，先停下来，请用户运行 `/req-analysis <计划路径>` 后再执行。已批准的计划应由用户在调用本命令前确认。
+   - Superpowers 计划：检查任务清单、每项的文件和验证步骤，以及 `Frontend quality supplement (frontend-workflow)` 章节（旧计划中可能叫 `Frontend quality supplement (req-workflow)`，视为同一章节）。缺少前端补充时，先停下来，请用户运行 `/req-analysis <计划路径>` 后再执行。已批准的计划应由用户在调用本命令前确认。
    - 旧版方案没有“浏览器功能测试”时，按“不适用”处理，并在执行确认中说明。
 3. 以下情况必须停下来提示，不要自行补写方案后直接开始改代码：
    - 文件不存在，或独立方案缺少必需章节，或 Superpowers 计划缺少任务、验证步骤或前端补充；

@@ -1,4 +1,4 @@
-# req-workflow
+# frontend-workflow
 
 A Claude Code plugin for a plan-first frontend workflow: analyze a requirement into a plan, implement it with risk-based RED-GREEN testing, verify supported browser platforms, and finish with an independent frontend review and report.
 
@@ -6,7 +6,7 @@ A Claude Code plugin for a plan-first frontend workflow: analyze a requirement i
 
 ## 与 Superpowers 配合
 
-Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；req-workflow 补充前端验收、移动端浏览器验证、埋点、弱网与测试服数据保护。两个插件分别安装，不复制或维护 Superpowers 的技能文件。Claude Code 官方市场的安装命令是：
+Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；frontend-workflow 补充前端验收、移动端浏览器验证、埋点、弱网与测试服数据保护。两个插件分别安装，不复制或维护 Superpowers 的技能文件。Claude Code 官方市场的安装命令是：
 
 ```text
 /plugin install superpowers@claude-plugins-official
@@ -17,11 +17,11 @@ Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；r
 1. 使用 `/superpowers:brainstorming` 澄清需求。设计批准后，使用 `/superpowers:using-git-worktrees` 建立工作区，再由 `/superpowers:writing-plans` 生成实施计划草稿。
 2. 在最终批准计划前，调用 `/req-analysis docs/superpowers/plans/<计划文件>.md`。它会把前端补充写回同一计划，不生成第二份方案。计划应包含适用的 AC、UI 状态、响应式与无障碍要求、测试映射、具体风险和回滚方式。
 3. 审阅整份计划后，直接运行 `/req-implement <计划文件路径>`，运行即视为批准。实现按逐任务的 RED-GREEN TDD 执行；多任务计划可选 Superpowers 的 `subagent-driven-development`，单线计划用 `executing-plans`。两套流程不叠加：Superpowers 执行技能负责任务顺序、实现和进度记录；测试由谁写和验证、审核几次、修复后是否复审，以 `/req-implement` 为准。
-4. req-workflow 继续执行移动端浏览器验证、测试服安全规则和代码审核：用 `executing-plans` 时由 `req-code-reviewer` 做一次完整审核；用 `subagent-driven-development` 时，Superpowers 已做通用审核，`req-code-reviewer` 只做前端专项审核。
+4. frontend-workflow 继续执行移动端浏览器验证、测试服安全规则和代码审核：用 `executing-plans` 时由 `req-code-reviewer` 做一次完整审核；用 `subagent-driven-development` 时，Superpowers 已做通用审核，`req-code-reviewer` 只做前端专项审核。
 
 改 bug 时继续用 `/req-bugfix` 复现问题并追踪根因；遇到复杂或反复失败的问题可配合 `systematic-debugging`。`/req-test` 用于独立测试已经实现的功能，仍按测试任务运行。
 
-避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。Superpowers 的实施子代理可以改业务代码，`code-reviewer` 受钩子只读限制；req-workflow 钩子会继续限制自己的 `req-*` 子代理。
+避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。Superpowers 的实施子代理可以改业务代码，`code-reviewer` 受钩子只读限制；frontend-workflow 钩子会继续限制自己的 `req-*` 子代理。
 
 Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-analysis`，再按原方式运行 `/req-implement`。如果提供的是 Superpowers 计划路径，则 `/req-analysis` 只补充该计划。
 
@@ -42,7 +42,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
    - 分析和实现中涉及第三方库的 API 时，先用 Context7 查询项目所用版本的文档。
    - 输出测试与审核报告，并追加到方案文件末尾，其中包括浏览器模拟覆盖不到、需要在真机上验证的手工测试步骤。不会自动提交代码。
 
-短写法 `/req-analysis`、`/req-bugfix`、`/req-implement`、`/req-test` 与其他命令不冲突时可以直接使用；完整写法是 `/req-workflow:req-analysis` 等。
+短写法 `/req-analysis`、`/req-bugfix`、`/req-implement`、`/req-test` 与其他命令不冲突时可以直接使用；完整写法是 `/frontend-workflow:req-analysis` 等。
 
 ## 改 bug：`/req-bugfix`
 
@@ -229,7 +229,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 1. 在 [context7.com](https://context7.com) 注册并生成一个免费的 API key。
 2. 在插件的配置项 **Context7 API key（可选）** 中填入：
    - 启用或重新上传插件时，Claude Code 会弹出配置对话框；
-   - 之后修改：终端中运行 `/plugin`，在 **Installed** 中选中 `req-workflow`，进入 **Configure options**。
+   - 之后修改：终端中运行 `/plugin`，在 **Installed** 中选中 `frontend-workflow`，进入 **Configure options**。
 3. 重新加载插件（`/reload-plugins`）或开启新会话后生效。
 
 key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文件、`settings.json` 或项目仓库。插件在 `.mcp.json` 中只引用 `${user_config.context7_api_key}`，连接时作为 `Authorization: Bearer` 请求头发送给 Context7。留空时发送的是空的 Bearer 请求头，Context7 会按匿名访问处理。
@@ -256,7 +256,38 @@ key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文�
 
 ## 安装
 
-在 Claude 中通过本地上传安装本插件目录。如果之前安装过旧名称 `claude-req` 的版本，请先卸载，否则两个插件中的同名命令会冲突。
+本仓库同时是一个 marketplace（`.claude-plugin/marketplace.json`，名称 `gavin-plugins`），可以通过 marketplace 安装。如果之前安装过旧名称 `claude-req` 的版本，或用本地上传装过本插件，请先卸载，否则同名命令会冲突。
+
+**本机开发**：从本地路径添加。插件直接读取目录中的文件，改动后开新会话或执行 `/reload-plugins` 即生效，不需要升版本号。
+
+```bash
+claude plugin marketplace add /path/to/frontend-workflow
+claude plugin install frontend-workflow@gavin-plugins
+```
+
+**从 GitHub 安装**：
+
+```bash
+claude plugin marketplace add <用户名>/<仓库名>
+claude plugin install frontend-workflow@gavin-plugins
+```
+
+### 自动更新
+
+第三方 marketplace 默认不自动更新，需要每位使用者自己打开：在 `/plugin` 的 Marketplaces 中选中 `gavin-plugins`，选择 Enable auto-update；或在 settings.json 中写：
+
+```json
+"extraKnownMarketplaces": {
+  "gavin-plugins": {
+    "source": { "source": "github", "repo": "<用户名>/<仓库名>" },
+    "autoUpdate": true
+  }
+}
+```
+
+- 打开后，Claude Code 会在会话开始后（随机延迟最多 10 分钟）检查更新；新版本在下次启动或执行 `/reload-plugins` 后生效。
+- 是否有更新以 `plugin.json` 的 `version` 判断：**每次发布都要升版本号**，只推送提交不升版本，使用者不会收到更新。
+- 设置了 `DISABLE_AUTOUPDATER=1` 时插件也不会自动更新；需要保留插件更新时，同时设置 `FORCE_AUTOUPDATE_PLUGINS=1`。
 
 ## 许可
 

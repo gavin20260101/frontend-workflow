@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 分两个阶段进行，**每个阶段结束后都必须停下来，等待用户回复**。
 
-全程只读，不修改任何业务代码、测试代码或配置文件。独立模式唯一允许写入的是阶段二末尾的 `docs/plans/` 方案文件，以及下文说明的本机 git exclude 文件；Superpowers 补充模式只允许更新用户指定计划中的 `Frontend quality supplement (req-workflow)` 章节。
+全程只读，不修改任何业务代码、测试代码或配置文件。独立模式唯一允许写入的是阶段二末尾的 `docs/plans/` 方案文件，以及下文说明的本机 git exclude 文件；Superpowers 补充模式只允许更新用户指定计划中的 `Frontend quality supplement (frontend-workflow)` 章节。
 
 下文的“项目规则”指项目中的 CLAUDE.md 和 CLAUDE.local.md（存在时）。
 
@@ -25,7 +25,7 @@ disable-model-invocation: true
 
 1. 读取该计划、它引用的设计文档、项目规则及相关实现代码，确认现有决定和本次改动范围。
 2. 按 `references/frontend-quality-supplement.md` 补充 AC、UI 状态、适用的响应式与无障碍要求、测试映射、具体风险和回滚方式；每条 AC 至少映射到一种验证方式。沿用已有的计划编号和测试框架。
-3. 把内容追加或更新在同一文件的 `## Frontend quality supplement (req-workflow)` 章节中。只修改该章节。
+3. 把内容追加或更新在同一文件的 `## Frontend quality supplement (frontend-workflow)` 章节中。只修改该章节。计划中已有旧插件名下的 `## Frontend quality supplement (req-workflow)` 章节时，把它当作同一章节更新，并把标题改为新名称。
 4. 逐个任务把计划要改的文件与项目规则中的高风险区域清单和规则配置文件对照，并检查计划步骤是否与项目规则冲突。把实现时会需要用户确认的事项一次列全：高风险文件的改动要点、计划步骤与项目规则冲突的地方、规则或配置范围需要扩大的地方。每项写明涉及的任务、原因和建议做法，编为 D 编号，一并放进未决问题。
 5. 补充章节写好后，按 `references/plan-review.md` 调用 req-plan-reviewer 审核整份计划（方案类型为“Superpowers 计划补充”），处理意见；补充章节中已有“方案审核记录”且用户没有要求重新审核时跳过。
 6. 输出新增或更新摘要、未决问题、计划文件路径，以及实际打开的项目文件、执行的搜索和查询的第三方文档。未决问题会改变需求或方案时先停下；用户答复后，把答复写进补充章节，不再单独问是否批准。结束时说明：“请审阅完整计划（含前端补充）。确认后直接运行 `/req-implement <计划路径>`，运行即视为批准计划和前端补充。”

@@ -1,5 +1,5 @@
 {
-  "name": "req-workflow",
+  "name": "frontend-workflow",
   "description": "前端工作流：需求方案、行为改动测试先失败后实现、移动端浏览器验证、埋点与测试服安全、前端专项审核。可独立使用，也可补充 Superpowers 计划并复用其 TDD 与任务执行流程。缺陷先复现、找根因并验证回归测试；/req-test 用于独立测试已有功能，/req-parallel 管理多个 worktree。",
   "version": "2.10.0",
   "author": {
