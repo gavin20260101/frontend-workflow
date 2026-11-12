@@ -1,6 +1,7 @@
 ---
 name: req-browser-tester
 description: 浏览器功能测试工程师。由 /req-implement 在实现前为已有 E2E 框架编写并验证 RED 用例、实现后执行浏览器验证，或由 /req-bugfix、/req-test 调用；核对页面状态、控制台、网络请求和埋点。只修改 E2E 测试文件，不修改业务代码。
+model: opus
 ---
 
 # 浏览器功能测试子代理

@@ -1,4 +1,4 @@
-// PreToolUse 钩子：req-code-reviewer 和 Superpowers code-reviewer 只读；req-test-runner 和 req-browser-tester 只改测试文件、只运行已有脚本；
+// PreToolUse 钩子：req-code-reviewer、req-plan-reviewer 和 Superpowers code-reviewer 只读；req-test-runner 和 req-browser-tester 只改测试文件、只运行已有脚本；
 // req-browser-tester 只能使用插件自带的浏览器服务，不能关闭用户 Chrome 中的标签页，浏览器工具只能把文件写到截图目录或临时目录。
 // 主会话和其他代理的调用一律放行。拦截时以退出码 2 结束，stderr 的内容会返回给子代理。
 // 这是防误操作的护栏，不是沙箱。
@@ -6,7 +6,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const REVIEWERS = new Set(['req-code-reviewer', 'code-reviewer']);
+const REVIEWERS = new Set(['req-code-reviewer', 'req-plan-reviewer', 'code-reviewer']);
 const BROWSER_TESTER = 'req-browser-tester';
 const TESTERS = new Set(['req-test-runner', BROWSER_TESTER]);
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -18,8 +18,10 @@ const USER_CHROME_CLOSE_TOOL = /browser-user-chrome__browser_close$/;
 const PATH_PARAM = /^(filePath|outputDirPath|outputPath|savePath|path|dir|directory)$/i;
 const ARTIFACTS_DIR = path.join('docs', 'plans', 'browser-artifacts');
 
-const GIT_READONLY = new Set(['diff', 'status', 'log', 'show', 'rev-parse', 'ls-files', 'merge-base', 'blame', 'check-ignore']);
-const PIPE_FILTERS = new Set(['head', 'tail', 'wc', 'grep']);
+const GIT_READONLY = new Set(['diff', 'status', 'log', 'show', 'rev-parse', 'ls-files', 'merge-base', 'blame', 'check-ignore', 'grep']);
+const PIPE_FILTERS = new Set(['head', 'tail', 'wc', 'grep', 'sort', 'cut']);
+// 测试子代理可以单独使用的只读命令（重定向和命令替换仍然拦截）
+const TESTER_READONLY = new Set(['ls', 'wc', 'echo']);
 const PACKAGE_MANAGERS = new Set(['npm', 'pnpm', 'yarn', 'bun']);
 const ALLOWED_ENV = /^(CI|NODE_ENV|TZ|FORCE_COLOR|NO_COLOR)=/;
 const TEST_DIRS = new Set(['__tests__', '__mocks__', '__fixtures__', 'test', 'tests', 'e2e', 'fixtures']);
@@ -84,11 +86,19 @@ function splitCommand(command) {
 
 const toWords = (text) => text.split(/\s+/).map((w) => w.replace(/['"]/g, ''));
 
-// git [--no-pager] <只读子命令>；不允许 -c、-C 等全局参数和写文件的参数
-function isReadonlyGit(words) {
-  const sub = words[1] === '--no-pager' ? words[2] : words[1];
-  if (!GIT_READONLY.has(sub)) return false;
-  return !words.some((w) => /^--(output|ext-diff|open-files-in-pager)/.test(w));
+// git [--no-pager] [-C <当前目录>] <只读子命令>；不允许 -c 等其他全局参数和写文件的参数
+function isReadonlyGit(words, cwd) {
+  let i = 1;
+  while (words[i] === '--no-pager' || words[i] === '-C') {
+    if (words[i] === '-C') {
+      if (!words[i + 1] || realpathOrSelf(path.resolve(cwd, words[i + 1])) !== realpathOrSelf(cwd)) return false;
+      i += 2;
+    } else {
+      i += 1;
+    }
+  }
+  if (!GIT_READONLY.has(words[i])) return false;
+  return !words.some((w) => /^(--(output|ext-diff|open-files-in-pager)|-O)/.test(w));
 }
 
 function readScripts(cwd) {
@@ -120,28 +130,31 @@ function scriptBodies(scripts, name, seen = new Set()) {
   return bodies;
 }
 
-function checkReviewerBash(agentName, command) {
+function checkReviewerBash(agentName, command, cwd) {
   const { segments, unsafe } = splitCommand(command);
   if (unsafe) return `${agentName} 不能使用${unsafe}`;
   for (const { text, piped } of segments) {
     const words = toWords(text);
-    const ok = piped ? PIPE_FILTERS.has(words[0]) : words[0] === 'git' && isReadonlyGit(words);
+    const ok = piped ? PIPE_FILTERS.has(words[0]) : words[0] === 'git' && isReadonlyGit(words, cwd);
     if (!ok) {
-      return `${agentName} 只能执行只读 git 命令（${[...GIT_READONLY].join('、')}），管道后只能接 head、tail、wc、grep；读取文件请用 Read、Grep、Glob 工具。被拦截的部分：${text}`;
+      return `${agentName} 只能执行只读 git 命令（${[...GIT_READONLY].join('、')}），管道后只能接 ${[...PIPE_FILTERS].join('、')}；读取文件请用 Read、Grep、Glob 工具。被拦截的部分：${text}`;
     }
   }
   return null;
 }
 
-function checkTesterSegment(words, scripts) {
+function checkTesterSegment(words, scripts, cwd) {
   let i = 0;
   while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) {
     if (!ALLOWED_ENV.test(words[i])) return `不能设置环境变量 ${words[i].split('=')[0]}`;
     i++;
   }
   const [cmd, sub, ...rest] = words.slice(i);
-  if (cmd === 'git') return isReadonlyGit(words.slice(i)) ? null : '只能执行只读 git 命令';
-  if (!PACKAGE_MANAGERS.has(cmd)) return '只能运行 package.json 中已有的脚本和只读 git 命令';
+  if (cmd === 'git') {
+    return isReadonlyGit(words.slice(i), cwd) ? null : `只能执行只读 git 命令（${[...GIT_READONLY].join('、')}；-C 只能指向当前项目目录）`;
+  }
+  if (TESTER_READONLY.has(cmd)) return null;
+  if (!PACKAGE_MANAGERS.has(cmd)) return `只能运行 package.json 中已有的脚本、只读 git 命令和 ${[...TESTER_READONLY].join('、')}`;
 
   let script;
   let args;
@@ -165,8 +178,8 @@ function checkTesterBash(agentName, command, cwd) {
   for (const { text, piped } of segments) {
     const words = toWords(text);
     const reason = piped
-      ? PIPE_FILTERS.has(words[0]) ? null : '管道后只能接 head、tail、wc、grep'
-      : checkTesterSegment(words, scripts);
+      ? PIPE_FILTERS.has(words[0]) ? null : `管道后只能接 ${[...PIPE_FILTERS].join('、')}`
+      : checkTesterSegment(words, scripts, cwd);
     if (reason) return `${agentName}：${reason}。被拦截的部分：${text}`;
   }
   return null;
@@ -251,7 +264,7 @@ try {
     reason = checkMcpTool(agent, tool, params, cwd);
   } else if (REVIEWERS.has(agent)) {
     if (WRITE_TOOLS.has(tool)) reason = `${agent} 是只读审核员，不能修改任何文件`;
-    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''));
+    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd);
   } else if (WRITE_TOOLS.has(tool)) {
     reason = checkTesterWrite(agent, params, cwd);
   } else if (tool === 'Bash') {

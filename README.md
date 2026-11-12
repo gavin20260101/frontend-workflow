@@ -16,8 +16,8 @@ Superpowers 负责通用的设计澄清、实施计划、TDD 和任务执行；r
 
 1. 使用 `/superpowers:brainstorming` 澄清需求。设计批准后，使用 `/superpowers:using-git-worktrees` 建立工作区，再由 `/superpowers:writing-plans` 生成实施计划草稿。
 2. 在最终批准计划前，调用 `/req-analysis docs/superpowers/plans/<计划文件>.md`。它会把前端补充写回同一计划，不生成第二份方案。计划应包含适用的 AC、UI 状态、响应式与无障碍要求、测试映射、具体风险和回滚方式。
-3. 审阅并批准整份计划后，运行 `/req-implement <计划文件路径>`。实现按逐任务的 RED-GREEN TDD 执行；多任务计划可选 Superpowers 的 `subagent-driven-development`，单线计划用 `executing-plans`。
-4. req-workflow 继续执行移动端浏览器验证、测试服安全规则和前端专项审核。
+3. 审阅整份计划后，直接运行 `/req-implement <计划文件路径>`，运行即视为批准。实现按逐任务的 RED-GREEN TDD 执行；多任务计划可选 Superpowers 的 `subagent-driven-development`，单线计划用 `executing-plans`。两套流程不叠加：Superpowers 执行技能负责任务顺序、实现和进度记录；测试由谁写和验证、审核几次、修复后是否复审，以 `/req-implement` 为准。
+4. req-workflow 继续执行移动端浏览器验证、测试服安全规则和代码审核：用 `executing-plans` 时由 `req-code-reviewer` 做一次完整审核；用 `subagent-driven-development` 时，Superpowers 已做通用审核，`req-code-reviewer` 只做前端专项审核。
 
 改 bug 时继续用 `/req-bugfix` 复现问题并追踪根因；遇到复杂或反复失败的问题可配合 `systematic-debugging`。`/req-test` 用于独立测试已经实现的功能，仍按测试任务运行。
 
@@ -29,15 +29,16 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 1. `/req-analysis <需求原文>`
    - 阶段一：需求复述、验收标准（AC）、待确认事项（Q）、相似实现、代码定位、影响范围、测试现状、风险等级初评。停下等你答复。
-   - 阶段二：方案审核单（修改的文件、不做什么、替代方案、兼容性风险、埋点变更、测试方案、回滚方式等），保存到 `docs/plans/YYYYMMDD-名称.md`。停下等你审批。
+   - 阶段二：方案审核单（修改的文件、不做什么、替代方案、兼容性风险、埋点变更、测试方案、回滚方式等），保存到 `docs/plans/YYYYMMDD-名称.md`。
+   - 方案审核：保存后由 `req-plan-reviewer`（Fable 模型）对照代码审核一轮，主代理逐条核实后采纳或写明不采纳的理由，会改变需求或范围的意见转为待确认事项交给你；处理结果记在方案的“方案审核记录”中。`/req-bugfix` 的修复方案和 Superpowers 计划补充同样会审核。停下等你审批。
    - 测试方案按层次组织：每条验收标准由哪一层验证（单元 / 组件 / 浏览器功能 / 真机手工），每层具体到用例。
 2. `/req-implement <方案文件路径>`（需求方案、缺陷修复方案或已批准的 Superpowers 计划都可执行）
    - 检查方案是否完整、代码是否偏离方案，记录实现基准（当前提交号）。
-   - 主代理实现业务代码；命中高风险区域的文件，修改前会停下确认。
-   - 每个行为改动先对计划中适用的单元、组件或已有 E2E 用例做 RED，再写业务代码；实现后对同一批用例做 GREEN。手工浏览器验证保留实现前后的对照步骤。
+   - 主代理实现业务代码；命中高风险区域的文件，在开工前的执行确认里一次列出改动要点，请你确认，实现中超出这些要点时再停下。
+   - 每个行为改动先由 `req-test-runner` 按主代理写的任务简报对计划中适用的单元、组件用例做 RED（已有 E2E 框架时由 `req-browser-tester` 做 E2E 用例的 RED），再写业务代码；实现后主代理自己对同一批用例做 GREEN，并核对测试没有被改动；全部任务完成后由 `req-test-runner` 做一次完整检查。手工浏览器验证保留实现前后的对照步骤。
    - `req-browser-tester` 子代理在本次改动涉及的支持平台上打开真实页面，核对页面状态、控制台报错、失败请求、横向溢出、点击区域和埋点请求；核心页面还可以做性能与弱网检查。开始前会请你启动本地页面。
    - L2 及以上的改动，在第一轮审核前由 `silent-failure-hunter`、`pr-test-analyzer` 做专项检查（需要安装官方插件 pr-review-toolkit，没装就跳过）。
-   - `req-code-reviewer` 子代理只读审核，最多 3 轮；专项检查的意见由它逐条核实后再决定是否采纳。
+   - `req-code-reviewer` 子代理只读审核，最多 3 轮；只有修复了阻断项或有异议时才进入下一轮，下一轮只复核上一轮的问题和修复涉及的文件。专项检查的意见由它逐条核实后再决定是否采纳。
    - 分析和实现中涉及第三方库的 API 时，先用 Context7 查询项目所用版本的文档。
    - 输出测试与审核报告，并追加到方案文件末尾，其中包括浏览器模拟覆盖不到、需要在真机上验证的手工测试步骤。不会自动提交代码。
 
@@ -120,6 +121,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | Skill | `req-parallel` | 并行处理多个任务的规划、进度汇总和合并顺序建议，只能由你手动调用 |
 | Skill | `req-implement` | 按方案实现、测试、审核，只能由你手动调用 |
 | Skill | `req-test` | 按风险与影响面为已有功能选择测试用例、确认缺陷并输出带复现步骤的测试报告；只测试不修复，只能由你手动调用 |
+| 子代理 | `req-plan-reviewer` | 方案保存后、你审批前，对照代码审核方案并提出改进意见；只读 |
 | 子代理 | `req-test-runner` | 编写和修正单元测试、组件测试，运行检查命令，分析失败原因；只改测试文件 |
 | 子代理 | `req-browser-tester` | 实现前为已有 E2E 框架编写 RED 用例，实现后执行浏览器功能测试；只改测试文件 |
 | 子代理 | `req-code-reviewer` | 对照方案独立审核本次改动和测试结果；只读 |
@@ -129,7 +131,8 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | MCP 服务 | `browser-user-chrome` | 你正在用的 Chrome：通过 Playwright Extension 连接，只能操作你授权的标签页 |
 | MCP 服务 | `browser-perf` | Chrome 官方 DevTools MCP（`chrome-devtools-mcp@1.11.0`）：弱网和 CPU 降速、性能录制、Lighthouse、堆快照 |
 | MCP 服务 | `context7` | Context7 远程服务（`https://mcp.context7.com/mcp`）：查询第三方库指定版本的文档 |
-| 钩子 | `hooks/guard-subagents.mjs` | 强制执行上面三个子代理的权限边界 |
+| 钩子 | `hooks/guard-subagents.mjs` | 强制执行上面四个子代理的权限边界 |
+| 参考 | `references/plan-review.md` | 调用方案审核员和处理审核意见的统一流程，供 `req-analysis`、`req-bugfix` 引用 |
 | 参考 | `references/frontend-quality-supplement.md` | 将前端验收、UI 状态、响应式、无障碍和测试映射补入同一份计划 |
 | 外部子代理（可选） | `pr-review-toolkit:silent-failure-hunter`、`pr-review-toolkit:pr-test-analyzer` | 审核前的专项检查：被吞掉的错误和缺失的失败处理、测试覆盖缺口 |
 
@@ -177,11 +180,28 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 `browser-user-chrome` 操作的是你的真实浏览器，所以额外加了这些限制：方案阶段会列入“需要特别确认的事项”；实现阶段使用前单独征求你的同意；扩展每次连接都需要你在 Chrome 中授权（插件没有配置跳过授权的 token）；子代理只能操作你授权的标签页，不能关闭标签页，不读取、不输出 Cookie 和登录凭证；这个服务不开放 Cookie 和 localStorage 读写工具；不做设备模拟，页面按你的窗口大小显示。
 
+## 各阶段使用的模型
+
+子代理的模型和思考程度写在 `agents/*.md` 的 frontmatter 中（`model`、`effort`），不受主会话模型影响：
+
+| 阶段 | 执行者 | 模型 | 思考程度 |
+|------|--------|------|---------|
+| 需求分析、写方案 | 主会话 | 主会话当前模型 | 主会话设置 |
+| 方案审核 | `req-plan-reviewer` | Fable（`fable`） | high |
+| 写业务代码 | 主会话 | 主会话当前模型；建议把会话模型设为 Opus 5.5 | 主会话设置 |
+| 单元、组件测试 | `req-test-runner` | Opus（`opus`） | 默认 |
+| 浏览器功能测试 | `req-browser-tester` | Opus（`opus`） | 默认 |
+| 代码审核 | `req-code-reviewer` | Fable（`fable`） | high |
+
+- 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5）。需要固定版本时改成完整模型 ID，如 `claude-opus-5-5`。
+- 账号无法使用 Fable 时，方案审核会跳过并在输出中注明；代码审核会调用失败，需要把 `req-code-reviewer.md` 的 `model` 改为 `opus` 或删掉这一行（跟随主会话）。
+- 使用 Superpowers 的 `subagent-driven-development` 时，它的实施和审核子代理的模型由 Superpowers 决定，不受这里的设置影响。
+
 ## 子代理守卫钩子
 
-钩子约束本插件的三个子代理，并对 Superpowers 的 `code-reviewer` 施加只读限制；主会话和其他代理不受影响：
+钩子约束本插件的四个子代理，并对 Superpowers 的 `code-reviewer` 施加只读限制；主会话和其他代理不受影响：
 
-- `req-code-reviewer` 和 Superpowers 的 `code-reviewer`：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
+- `req-code-reviewer`、`req-plan-reviewer` 和 Superpowers 的 `code-reviewer`：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
 - `req-test-runner` 和 `req-browser-tester`：只能修改项目内的测试文件（`*.test.*`、`*.spec.*`，或 `__tests__`、`__mocks__`、`__fixtures__`、`test`、`tests`、`e2e`、`fixtures` 目录下的文件，快照除外）；只能运行 package.json 中已有的脚本和只读 git 命令；会自动修改文件（`--fix`、`--write`、`-u` 等）、进入 watch 或交互模式（`--ui`、`cypress open`）、常驻（dev、serve 等）的脚本会被拦截，包括通过 run-s / run-p 间接调用的子脚本。
 - `req-browser-tester`：只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
 - `pr-review-toolkit` 的专项检查子代理不在钩子的约束范围内，流程只在调用时要求它们只读。

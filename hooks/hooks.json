@@ -1,5 +1,5 @@
 {
-  "description": "限制 req-code-reviewer 和 Superpowers code-reviewer 只读、req-test-runner 和 req-browser-tester 只改测试文件、req-browser-tester 只用插件自带的浏览器；主会话和其他代理不受影响",
+  "description": "限制 req-code-reviewer、req-plan-reviewer 和 Superpowers code-reviewer 只读、req-test-runner 和 req-browser-tester 只改测试文件、req-browser-tester 只用插件自带的浏览器；主会话和其他代理不受影响",
   "hooks": {
     "PreToolUse": [
       {
