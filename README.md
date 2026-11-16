@@ -23,7 +23,7 @@ Superpowers 负责通用的设计澄清和实施计划；frontend-workflow 补�
 
 改 bug 时继续用 `/req-bugfix` 复现问题并追踪根因；遇到复杂或反复失败的问题可配合 `systematic-debugging`。`/req-test` 用于独立测试已经实现的功能，仍按测试任务运行。
 
-避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。`/req-implement` 不使用 Superpowers 的实施和审核子代理；你在流程之外单独使用 Superpowers 的 `code-reviewer` 时，它仍受钩子只读限制。
+避免让两套流程同时生成设计文档、实施计划或重复审批。Superpowers 的设计和计划作为唯一事实来源；截图等临时产物可留在本机忽略目录。Superpowers `using-git-worktrees` 负责单个任务的工作区；`/req-parallel` 负责多个独立请求的 worktree，使用它时不要再让 Superpowers 为同一任务创建工作区。`/req-implement` 不使用 Superpowers 的实施和审核子代理；你在流程之外使用名为 `code-reviewer` 的代理（例如 pr-review-toolkit 的）时，它仍受钩子只读限制，另可使用只读的 `gh` 命令。
 
 Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-analysis`，再按原方式运行 `/req-implement`。如果提供的是 Superpowers 计划路径，则 `/req-analysis` 只补充该计划。
 
@@ -63,14 +63,14 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 停顿点 | 做法 |
 |---|---|
 | 普通确认点（阶段间停顿、待确认事项、执行确认、选 worktree 起点等） | 按最合理的假设继续，逐条记录 |
-| 安全关卡（高风险区域、新增依赖、修改公共接口、改动超出方案、审核 2 轮仍有阻断项） | 照常继续，逐条记录，排在记录最前 |
+| 安全关卡（高风险区域、新增依赖、修改公共接口、改动超出方案、审核 2 轮仍有阻断项） | 有授权时照常继续，逐条记录，排在记录最前；没有授权时终止 |
 | 环境准备（启动本地页面、安装依赖） | 自己做：按锁文件安装依赖，后台启动页面，结束时停掉 |
 | 必须本人在场的事（验证码和 SSO 登录、使用你正在用的 Chrome、未确认沙箱的支付和短信等、提交和推送） | 不做，相关用例记为“未执行（无人值守：原因）”并转手工 |
 | 无法继续（输入不对、缺陷未复现、同一问题修 3 次仍失败等） | 保存进度后终止，写明原因 |
 
-每次运行都会在方案文件中写“无人值守记录”（U 编号，写明原本要问什么、采用了什么做法、复核时要看什么），并在最后输出固定格式的结束块（结果、产物路径、放行和假设的条数、需要人工处理的事项、建议的下一条命令）。命令之间不会自动衔接：`/req-analysis --auto` 只产出方案，要不要接着实现由发起运行的任务指令决定。之后不带 `--auto` 运行 `/req-implement` 时，会把记录中的假设和放行条目列出来请你确认。
+每次运行都会在方案文件中写“无人值守记录”（U 编号，写明原本要问什么、采用了什么做法、复核时要看什么），并在最后输出固定格式的结束块（结果、产物路径、放行和假设的条数、浏览器验证执行了几条、需要人工处理的事项、建议的下一条命令）。命令之间不会自动衔接：`/req-analysis --auto` 只产出方案，要不要接着实现由发起运行的任务指令决定。之后不带 `--auto` 运行 `/req-implement` 时，会把记录中的假设和放行条目列出来请你确认。
 
-安全关卡在无人值守时是放行的，高风险文件可能在没人看着的情况下被修改。建议在独立的 worktree 或分支上运行，回来后先看方案文件里的“无人值守记录”。无人值守运行还需要会话的权限设置允许相关工具调用，否则被拒绝的部分会记为未执行。
+安全关卡只有在你授权时才放行：由 `/unattended` 发起，或你的 `CLAUDE.md` 里的“无人值守开关”写明对单独运行的 `--auto` 也生效（见下文“无人值守开关”）。没有授权时，方案照常产出，`/req-implement --auto` 遇到关卡会终止并写明卡在哪里。放行之后，高风险文件可能在没人看着的情况下被修改。建议在独立的 worktree 或分支上运行，回来后先看方案文件里的“无人值守记录”。无人值守运行还需要会话的权限设置允许相关工具调用，否则被拒绝的部分会记为未执行。
 
 ## 离开电脑时批量跑任务：`/unattended-plan`、`/unattended`
 
@@ -86,7 +86,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
    ```
 
    它会拆分任务、判断类型（`feature`、`bugfix`、`implement`、`test`、`other`）、排依赖，趁你还在把会改变“做什么”的问题问清楚，挑出无人值守时做不了的部分，然后把任务书保存到 git 不跟踪的目录。只写任务书，不执行。格式见 `references/unattended-task-plan.md`，也可以照着自己写。
-2. **确认工作区干净、权限模式是“自动”，然后运行**：
+2. **确认工作区干净、权限模式是“自动”，然后在 Claude 桌面应用里运行**（查权限模式和开子会话用的是桌面应用的工具）：
 
    ```text
    /unattended docs/plans/unattended-20261116-1830.md
@@ -111,9 +111,13 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 - 不变：不推送、不合并；不为了让检查通过而削弱检查（改规则配置、加忽略、用 any 或类型断言、删改测试断言）；不绕过被权限拒绝的操作；不做电脑系统层面的高风险操作（sudo、改系统或全局设置、动项目目录以外的文件）。
 ```
 
+上面这段只对 `/unattended` 生效。想让单独运行的 `--auto`（例如定时任务里点名运行 `req-implement --auto`）也放行安全关卡和安装依赖，把第一条的开头改成“在我输入 `/unattended` 启动的运行期间（包括它开出的子会话），以及我或我的自动化任务指令点名运行带 `--auto` 的 req-* 流程期间生效”。不改的话，单独的 `--auto` 只按假设推进普通确认点，遇到安全关卡会终止。
+
 各类条款在开关打开后怎么处理、怎么记录，见 `references/unattended-rule-switch.md`。对代码本身的要求（分层、依赖方向、编码约定、检查要通过）一条都不放开。
 
 `/unattended` 只能由你输入命令启动，模型不会自己触发；`/unattended-plan` 可以在你说“帮我排一下要跑的任务”时触发。
+
+同时装了 Superpowers 时，它会要求模型“只要可能相关就调用技能”。想确保 `req-*` 流程只在点名时运行，可以在全局 `CLAUDE.md` 里加一句：“frontend-workflow 的 req-* 技能只在我输入命令或点名要求时使用，不要因为任务内容相关就自行调用。”
 
 ## 改 bug：`/req-bugfix`
 
@@ -149,7 +153,9 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 - **版本对齐**：部署版本和本地代码不一致或无法确定时，会停下来请你选：自己切到部署的提交、改为只做浏览器测试，或照常测并在报告中注明。测试结束时会再读一次版本，测到一半有人重新部署会提示你。
 - **保护共用数据**：只用测试账号；不改、不删别人的数据；新建的数据加 `[autotest]` 前缀并在报告中列出，方便清理；下单、支付、发短信等操作要你先确认测试服接的是沙箱；异常场景用浏览器拦截接口模拟，不动测试服数据。
 - **登录**：默认在可见 Chrome 中由你登录一次，之后复用。测试账号只有在地址是你在对话中给的、且域名能看出是测试环境（staging、test、dev、qa 等）时才会代为输入，否则请你自己登录。
-- **报告多写几项**：部署版本、发生时间、测试数据 ID、失败请求的 trace ID 或 request-id，方便后端查日志。测试服是正式构建，性能指标可以作为参考；代码经过压缩，疑似代码位置的把握会低一些。用于测试已经实现的功能，只测试，不修改业务代码：
+- **报告多写几项**：部署版本、发生时间、测试数据 ID、失败请求的 trace ID 或 request-id，方便后端查日志。测试服是正式构建，性能指标可以作为参考；代码经过压缩，疑似代码位置的把握会低一些。
+
+两种模式都只测试已经实现的功能，不修改业务代码：
 
 - **按需求写用例**：整理验收标准，定位被测代码，写测试方案到 `docs/plans/YYYYMMDD-test-名称.md`。按需求、代码影响和风险选择适用的正常路径、关键边界、错误状态、加载与空状态、交互、登录权限、埋点和支持设备；每条验收标准至少映射一种验证方式。不适用的写明原因。核心流程和 L3 改动再扩大设备、弱网和异常路径覆盖。需求不明确的地方先按假设继续，标注 Q 编号。
 - **能做的相关检查全部执行，不用等审批**：`req-test-runner` 编写适用的单元与组件测试并运行计划中的检查命令；`req-browser-tester` 在本次支持的平台上执行计划用例、通用检查和埋点核对，核心页面加做性能与弱网检查。
@@ -175,7 +181,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 3. **查看进度、决定合并顺序**：回到主目录运行 `/req-parallel 状态`，看每个任务的阶段、未提交的改动、多个分支都改到的文件和建议的合并顺序；本批合并完后，它会生成下一批的消息。
 4. **收尾**：每个 worktree 完成后会提醒你先提交再归档。说“提交”时由 Claude 写提交说明并经你确认后提交；推送和合并由你执行。
 
-仍然需要你做的：新开会话并粘贴消息；在 worktree 中安装依赖（`pnpm install`，你的设置禁止 Claude 安装）；启动各 worktree 的本地页面；确认方案；推送和合并。
+仍然需要你做的：新开会话并粘贴消息；在 worktree 中安装依赖（`pnpm install`；有人值守时流程不会自己安装）；启动各 worktree 的本地页面；确认方案；推送和合并。
 
 说明：
 - 起点每次由你选择：`/req-parallel` 规划时问一次，写进每条消息的 `--base`；单独使用 `/req-bugfix --worktree` 或 `/req-analysis --worktree` 且没有写 `--base` 时，会先问你。worktree 建好后，如果起点和你选的不一致，会把这个新建、还没有改动的 worktree 对齐到你选的起点（执行 `git reset --hard`，会弹窗请你确认）；已经存在的 worktree 不会被移动。
@@ -212,11 +218,16 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 参考 | `references/unattended-task-plan.md` | 无人值守任务书的格式和示例，供 `unattended-plan`、`unattended` 引用 |
 | 参考 | `references/unattended-rule-switch.md` | 无人值守开关打开后，项目规则里各类“要人确认”的条款怎么处理、怎么记录，供 `unattended` 引用 |
 | 参考 | `references/unattended-run-report.md` | `/unattended` 的汇总模板 |
+| 参考 | `references/worktree-setup.md` | 进入 worktree 和环境检查，供 `req-analysis`、`req-bugfix` 引用 |
+| 参考 | `references/project-inventory.md` | “测试现状”里检查命令的识别和浏览器测试条件，供 `req-analysis`、`req-bugfix`、`req-test` 引用 |
+| 参考 | `references/analysis-common.md` | 风险等级、处理用户的答复、“需要特别确认的事项”的触发条件，供 `req-analysis`、`req-bugfix` 引用 |
+| 参考 | `references/plan-file.md` | 方案文件保存前的 git 忽略判断，以及方案状态的全部取值 |
+| 参考 | `references/third-party-docs.md` | 用 Context7 查询第三方库文档的规则 |
 | 外部子代理（可选） | `pr-review-toolkit:silent-failure-hunter`、`pr-review-toolkit:pr-test-analyzer` | 只在调用 `/req-implement` 时明确要求才用：审核前的专项检查 |
 
 ## 项目规则（可选，推荐）
 
-插件会读取项目中的 `CLAUDE.md` 和 `CLAUDE.local.md`，以下内容建议在其中写明：
+插件把项目的 `CLAUDE.md`、`CLAUDE.local.md`、`.claude/rules/` 下的文件和根目录的 `AGENTS.md` 都当作项目规则，以下内容建议在其中写明：
 
 - 证据等级 A/B/C 的定义。没有时使用内置默认定义。
 - 高风险区域清单（路径 + 原因 + 审核要点）。没有时，分析和审核中会写明“项目未配置高风险区域”。
@@ -273,14 +284,14 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 - 写测试、跑命令、按用例操作浏览器用 Sonnet；判断方案和代码对不对的两个审核员用 Fable。任务要改的文件命中高风险区域时，`/req-implement` 调用 `req-test-runner` 写测试会临时指定 Opus。测试子代理的结果不准时，可以把对应文件的 `model` 改回 `opus`。
 - 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。
-- 账号无法使用 Fable 时，方案审核会跳过并在输出中注明；代码审核会调用失败，需要把 `req-code-reviewer.md` 的 `model` 改为 `opus` 或删掉这一行（跟随主会话）。
+- 账号无法使用 Fable 时，方案审核会跳过并在输出中注明；代码审核调用失败时会改用 Opus 重试一次；想固定下来，把 `req-code-reviewer.md` 的 `model` 改为 `opus` 或删掉这一行（跟随主会话）。
 
 ## 子代理守卫钩子
 
-钩子约束本插件的四个子代理，并对 Superpowers 的 `code-reviewer` 施加只读限制；主会话和其他代理不受影响：
+钩子约束本插件的四个子代理，并对名为 `code-reviewer` 的代理（目前是 pr-review-toolkit 的）施加只读限制；主会话和其他代理不受影响：
 
-- `req-code-reviewer`、`req-plan-reviewer` 和 Superpowers 的 `code-reviewer`：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
-- `req-test-runner` 和 `req-browser-tester`：只能修改项目内的测试文件（`*.test.*`、`*.spec.*`，或 `__tests__`、`__mocks__`、`__fixtures__`、`test`、`tests`、`e2e`、`fixtures` 目录下的文件，快照除外）；只能运行 package.json 中已有的脚本和只读 git 命令；会自动修改文件（`--fix`、`--write`、`-u` 等）、进入 watch 或交互模式（`--ui`、`cypress open`）、常驻（dev、serve 等）的脚本会被拦截，包括通过 run-s / run-p 间接调用的子脚本。
+- `req-code-reviewer`、`req-plan-reviewer` 和名为 `code-reviewer` 的代理（它另可使用 `gh pr view / diff / list / checks / status`、`gh issue view / list`、`gh repo view`）：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
+- `req-test-runner` 和 `req-browser-tester`：只能修改项目内的测试文件（`*.test.*`、`*.spec.*`，或 `__tests__`、`__mocks__`、`__fixtures__`、`test`、`tests`、`e2e`、`fixtures` 目录下的文件，快照除外）；只能运行 package.json 中已有的脚本和只读 git 命令；会自动修改文件（`--fix`、`--write`、`-u` 等）、进入 watch 或交互模式（`--ui`、`cypress open`）、常驻（dev、serve 等）的脚本会被拦截，包括通过 run-s / run-p 间接调用的子脚本。名字看起来会发布、部署、安装或改动数据的脚本（deploy、release、publish、migrate、seed、reset 等）同样拦截。monorepo 子包的脚本用 `pnpm -C <子包目录> <脚本>`、`npm --prefix <子包目录> run <脚本>` 或 `yarn --cwd <子包目录> <脚本>` 运行，`cd` 和 `--filter` 不放行。
 - `req-browser-tester`：只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
 - `pr-review-toolkit` 的专项检查子代理不在钩子的约束范围内，流程只在调用时要求它们只读。
 
@@ -299,6 +310,8 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 - 浏览器服务通过 `npx` 启动固定版本的 `@playwright/mcp@0.0.83` 和 `chrome-devtools-mcp@1.11.0`（首次启动时从 npm 下载）。插件启用后，五个浏览器服务会在每个会话中启动，但浏览器只在第一次使用工具时才打开（`browser-user-chrome` 只在使用时才连接你的 Chrome）。不需要时，可以在 `/mcp` 中停用对应的服务。
 - Context7：连接远程服务 `https://mcp.context7.com/mcp`，需要联网。查询内容（库名、版本、技术问题）会发送到 Context7 的服务器，流程规定查询中不写业务代码、内部地址和业务名称。不需要时可以在 `/mcp` 中停用。API key 是可选的，详见下一节。
+- 可选的官方插件 pr-review-toolkit（在插件市场 claude-plugins-official 中）：只在调用 `/req-implement` 时明确要求专项检查才用到。
+- `/req-implement` 不加载 karpathy-guidelines，“最少代码、不顺手重构”的原则已写在技能里。
 
 ## 配置 Context7 API key（可选）
 
@@ -311,8 +324,6 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 3. 重新加载插件（`/reload-plugins`）或开启新会话后生效。
 
 key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文件、`settings.json` 或项目仓库。插件在 `.mcp.json` 中只引用 `${user_config.context7_api_key}`，连接时作为 `Authorization: Bearer` 请求头发送给 Context7。留空时发送的是空的 Bearer 请求头，Context7 会按匿名访问处理。
-- 可选：官方插件 pr-review-toolkit（在插件市场 claude-plugins-official 中），只在调用 `/req-implement` 时明确要求专项检查才用到。
-- `/req-implement` 不再加载 karpathy-guidelines，“最少代码、不顺手重构”的原则已写在技能里。
 
 ## 方案文件
 
@@ -320,19 +331,18 @@ key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文�
 
 ## 维护说明
 
-`req-analysis`、`req-bugfix` 和 `req-test` 仍包含各自的独立流程规则；Superpowers 计划补充规则集中在 `references/frontend-quality-supplement.md`。修改以下任一共享流程部分时，相关 `SKILL.md` 仍需同步修改（`req-test` 不涉及风险等级、“需要特别确认的事项”和 worktree；“需要用户协助时”一节与 `req-implement` 同步）：
+`req-analysis`、`req-bugfix` 和 `req-test` 共用的规则放在 `references/` 里，各只有一份：进入 worktree 和环境检查（`worktree-setup.md`）、检查命令识别和浏览器测试条件（`project-inventory.md`）、风险等级、处理用户的答复和“需要特别确认的事项”的触发条件（`analysis-common.md`）、方案文件的 git 忽略判断和状态取值（`plan-file.md`）、查询第三方库文档（`third-party-docs.md`）；Superpowers 计划补充规则在 `frontend-quality-supplement.md`。改这些规则时只改对应的文件。
 
-- 输出要求（证据等级）
-- 查询第三方库文档
-- 测试现状（检查命令识别、浏览器测试条件）
-- 风险等级的维度
-- 处理用户的答复
-- “需要特别确认的事项”的触发条件
-- 浏览器功能测试的格式（方式、环境、设备与浏览器服务、通用检查、性能与弱网检查）
-- 保存方案文件（git exclude 判断、状态、结束语）
-- 并行工作区（worktree）的进入和环境检查
+技能正文引用规则文件时一律写 `${CLAUDE_PLUGIN_ROOT}/references/<文件名>`，加载技能时会替换成实际路径。四个长流程的技能（`req-analysis`、`req-bugfix`、`req-implement`、`req-test`）和 `unattended` 开头都有“上下文被压缩之后”一节，新增规则文件时记得在那一节里点名。“项目规则”包括哪些文件，在五个 `req-*` 技能、`unattended`、`unattended-plan` 和四个子代理里各写了一遍，修改时要同步。
 
-无人值守模式的规则集中在 `references/unattended-mode.md`，各 `SKILL.md` 只有一节简短的入口。在技能里新增或修改“停下来等用户”的地方时，要在该文件中写明它属于哪一类、无人值守时怎么处理。
+仍然留在各 `SKILL.md` 里、修改时要同步的有：
+
+- 输出要求（证据等级的默认定义）：`req-analysis`、`req-bugfix`、`req-test`、`req-parallel` 和两个审核员各有一句。
+- 浏览器功能测试的格式（方式、环境、设备与浏览器服务、通用检查、性能与弱网检查）：三个技能各有侧重，没有合并。
+- “需要用户协助时”一节：`req-implement` 与 `req-test` 同步。
+- 保存方案文件一节里的文件名、状态和结束语。
+
+无人值守模式的规则集中在 `references/unattended-mode.md`，各 `SKILL.md` 只有一节简短的入口。在技能里新增或修改“停下来等用户”的地方时，要在该文件中写明它属于哪一类、无人值守时怎么处理。放行安全关卡和安装依赖要有授权，见该文件“授权”一节；结束块三个结果的含义也在该文件里定义，`/unattended` 靠它决定是否提交。
 
 `/unattended` 依赖各流程在 `--auto` 下输出的结束块（`无人值守结果：…`）来决定下一步；修改结束块的格式时，要同步 `skills/unattended/SKILL.md`。任务书的格式在 `references/unattended-task-plan.md`，`unattended-plan` 生成、`unattended` 读取，改格式时两个技能一起看。
 

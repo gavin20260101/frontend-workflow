@@ -28,6 +28,13 @@ const TEST_DIRS = new Set(['__tests__', '__mocks__', '__fixtures__', 'test', 'te
 // 会修改文件、进入 watch 或交互模式（Playwright UI、cypress open）的参数
 const FORBIDDEN_FLAGS = /(^|\s)(--fix(?!-dry-run)\b|--write\b|-u\b|--update\b|--updateSnapshot\b|--update-snapshots?\b|--watch(?!=false)\b|--watchAll(?!=false)\b|--ui\b|cypress\s+open\b)/;
 const LONG_RUNNING_SCRIPT = /^(dev|serve|start|preview|watch)(:|$)/;
+// 名字看起来会发布、部署、安装或改动数据的脚本，不属于检查命令
+const RISKY_SCRIPT_WORDS = new Set(['deploy', 'release', 'publish', 'prepublish', 'prepublishonly', 'postpublish', 'prepare', 'install', 'preinstall', 'postinstall', 'migrate', 'migration', 'seed', 'reset', 'drop', 'clean', 'upload', 'push']);
+const isRiskyScript = (name) => name.toLowerCase().split(/[:._-]/).some((part) => RISKY_SCRIPT_WORDS.has(part));
+// 指定子包目录的参数（monorepo）：pnpm -C <目录>、npm --prefix <目录>、yarn --cwd <目录>
+const DIR_FLAGS = { pnpm: ['-C', '--dir'], npm: ['--prefix', '-C'], yarn: ['--cwd'], bun: ['--cwd'] };
+// 名为 code-reviewer 的代理可以用的只读 gh 命令
+const GH_READONLY = { pr: new Set(['view', 'diff', 'list', 'checks', 'status']), issue: new Set(['view', 'list', 'status']), repo: new Set(['view']) };
 
 function deny(reason) {
   process.stderr.write(`[req 插件守卫] ${reason}\n`);
@@ -101,6 +108,13 @@ function isReadonlyGit(words, cwd) {
   return !words.some((w) => /^(--(output|ext-diff|open-files-in-pager)|-O)/.test(w));
 }
 
+// gh pr|issue|repo 的只读子命令；不允许打开浏览器或持续等待
+function isReadonlyGh(words) {
+  const allowed = GH_READONLY[words[1]];
+  if (!allowed || !allowed.has(words[2])) return false;
+  return !words.some((w) => /^(--web|-w|--watch)$/.test(w));
+}
+
 function readScripts(cwd) {
   let dir = cwd;
   while (true) {
@@ -135,35 +149,61 @@ function checkReviewerBash(agentName, command, cwd) {
   if (unsafe) return `${agentName} 不能使用${unsafe}`;
   for (const { text, piped } of segments) {
     const words = toWords(text);
-    const ok = piped ? PIPE_FILTERS.has(words[0]) : words[0] === 'git' && isReadonlyGit(words, cwd);
+    const ok = piped
+      ? PIPE_FILTERS.has(words[0])
+      : (words[0] === 'git' && isReadonlyGit(words, cwd)) || (agentName === 'code-reviewer' && words[0] === 'gh' && isReadonlyGh(words));
     if (!ok) {
-      return `${agentName} 只能执行只读 git 命令（${[...GIT_READONLY].join('、')}），管道后只能接 ${[...PIPE_FILTERS].join('、')}；读取文件请用 Read、Grep、Glob 工具。被拦截的部分：${text}`;
+      const gh = agentName === 'code-reviewer' ? '和只读 gh 命令（gh pr view / diff / list / checks / status，gh issue view / list，gh repo view）' : '';
+      return `${agentName} 只能执行只读 git 命令（${[...GIT_READONLY].join('、')}）${gh}，管道后只能接 ${[...PIPE_FILTERS].join('、')}；读取文件请用 Read、Grep、Glob 工具。被拦截的部分：${text}`;
     }
   }
   return null;
 }
 
-function checkTesterSegment(words, scripts, cwd) {
+function checkTesterSegment(words, cwd) {
   let i = 0;
   while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) {
     if (!ALLOWED_ENV.test(words[i])) return `不能设置环境变量 ${words[i].split('=')[0]}`;
     i++;
   }
-  const [cmd, sub, ...rest] = words.slice(i);
+  const cmd = words[i];
   if (cmd === 'git') {
     return isReadonlyGit(words.slice(i), cwd) ? null : `只能执行只读 git 命令（${[...GIT_READONLY].join('、')}；-C 只能指向当前项目目录）`;
   }
   if (TESTER_READONLY.has(cmd)) return null;
   if (!PACKAGE_MANAGERS.has(cmd)) return `只能运行 package.json 中已有的脚本、只读 git 命令和 ${[...TESTER_READONLY].join('、')}`;
 
+  // monorepo：包管理器后面紧跟目录参数时，读取那个子包的 package.json
+  let scripts;
+  let sub;
+  let rest;
+  const first = words[i + 1] ?? '';
+  const flag = DIR_FLAGS[cmd].find((f) => first === f || first.startsWith(`${f}=`));
+  if (flag) {
+    const inline = first.startsWith(`${flag}=`);
+    const dir = inline ? first.slice(flag.length + 1) : words[i + 2];
+    if (!dir) return `${flag} 后面要写子包目录`;
+    const target = path.resolve(cwd, dir);
+    const relative = path.relative(cwd, target);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return `${flag} 只能指向项目内的目录：${dir}`;
+    const file = path.join(target, 'package.json');
+    if (!existsSync(file)) return `目录 ${dir} 下没有 package.json`;
+    scripts = JSON.parse(readFileSync(file, 'utf8')).scripts ?? {};
+    [sub, ...rest] = words.slice(i + (inline ? 2 : 3));
+  } else {
+    scripts = readScripts(cwd);
+    [sub, ...rest] = words.slice(i + 1);
+  }
+
   let script;
   let args;
   if (sub === 'run' || sub === 'run-script') [script, ...args] = rest;
   else if (sub === 'test' || sub === 't') [script, args] = ['test', rest];
   else if (cmd !== 'npm' && sub && !sub.startsWith('-')) [script, args] = [sub, rest];
-  if (!script || !(script in scripts)) return `只能运行 package.json 中已有的脚本（未找到：${script ?? sub ?? cmd}）`;
+  if (!script || !(script in scripts)) return `只能运行 package.json 中已有的脚本（未找到：${script ?? sub ?? cmd}）；子包的脚本用 ${DIR_FLAGS[cmd][0]} <子包目录> 指定`;
 
   if (LONG_RUNNING_SCRIPT.test(script)) return `脚本 ${script} 会启动常驻进程`;
+  if (isRiskyScript(script)) return `脚本 ${script} 看起来会发布、部署、安装或改动数据，不属于检查命令，请交给主代理决定`;
   if (FORBIDDEN_FLAGS.test(` ${args.join(' ')}`)) return '不能追加会修改文件、进入 watch 或交互模式的参数';
   for (const body of scriptBodies(scripts, script)) {
     if (FORBIDDEN_FLAGS.test(` ${body}`)) return `脚本 ${script} 会自动修改文件、进入 watch 或交互模式（${body}），请交给主代理决定`;
@@ -174,12 +214,11 @@ function checkTesterSegment(words, scripts, cwd) {
 function checkTesterBash(agentName, command, cwd) {
   const { segments, unsafe } = splitCommand(command);
   if (unsafe) return `${agentName} 不能使用${unsafe}`;
-  const scripts = readScripts(cwd);
   for (const { text, piped } of segments) {
     const words = toWords(text);
     const reason = piped
       ? PIPE_FILTERS.has(words[0]) ? null : `管道后只能接 ${[...PIPE_FILTERS].join('、')}`
-      : checkTesterSegment(words, scripts, cwd);
+      : checkTesterSegment(words, cwd);
     if (reason) return `${agentName}：${reason}。被拦截的部分：${text}`;
   }
   return null;

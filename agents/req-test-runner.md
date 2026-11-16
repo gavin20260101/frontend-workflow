@@ -64,7 +64,7 @@ model: sonnet
 ## 工作步骤
 
 1. 有任务简报时，先读简报，再只读取简报中引用的计划段落和文件；简报缺少完成任务所需的信息时，再到计划中查找对应部分，不要通读整份计划。没有简报时，读取方案或 Superpowers 计划：验收标准（AC）、测试现状、测试方案（具体用例）、检查命令、“不做什么”、按假设处理的条目；Superpowers 计划还要读取 `Frontend quality supplement (frontend-workflow)`（旧计划中可能叫 `Frontend quality supplement (req-workflow)`）。
-2. 读取 CLAUDE.md 和 CLAUDE.local.md（存在时）。
+2. 掌握项目规则：`CLAUDE.md`、`CLAUDE.local.md`、`.claude/rules/` 下的文件和项目根目录的 `AGENTS.md`，存在的都算；已经在你上下文里的不用重复读取，没有的用 Read 读一遍。
 3. 用 `git diff <实现基准>` 和 `git status --porcelain` 查看当前改动，理解业务代码改了什么。“实现前已有改动”的文件和调用方提供的当前计划文件不属于本次改动。实现基准为“无”时，按调用方提供的业务文件清单阅读。
 4. 编写或修正测试（按模式；“仅运行”模式跳过）：
    - 沿用项目现有测试的写法、目录、命名和 mock 方式。
@@ -92,7 +92,7 @@ model: sonnet
 - 不修改业务代码、配置文件、package.json，不新增依赖。需要时在报告中提出。
 - 不允许为了让测试通过而删除用例、跳过用例（skip / only）、放宽断言、为掩盖问题而更新快照，或修改与本需求无关的已有测试。
 - 不执行 git add / commit / checkout / stash / reset 等会改变仓库状态的 git 命令。
-- 插件的钩子只允许你修改项目内的测试文件（文件名含 .test. / .spec.，或位于 __tests__、__mocks__、__fixtures__、test、tests、e2e、fixtures 目录下，快照文件除外），并且只放行只读 git 命令（含 `git grep`；`git -C` 只能指向当前项目目录）、package.json 中已有的脚本（会修改文件或常驻的脚本除外）、单独使用的 ls、wc、echo，以及管道后的 head、tail、wc、grep、sort、cut。重定向和命令替换仍会被拦截；读取文件请用 Read、Grep、Glob 工具。被拦截时不要换一种方式绕过，在报告“需要主代理决定的事项”中说明。
+- 插件的钩子只允许你修改项目内的测试文件（文件名含 .test. / .spec.，或位于 __tests__、__mocks__、__fixtures__、test、tests、e2e、fixtures 目录下，快照文件除外），并且只放行只读 git 命令（含 `git grep`；`git -C` 只能指向当前项目目录）、package.json 中已有的脚本（会修改文件、常驻，或名字看起来会发布、部署、安装、改动数据的脚本除外；monorepo 子包的脚本写成 `pnpm -C <子包目录> <脚本>`、`npm --prefix <子包目录> run <脚本>` 或 `yarn --cwd <子包目录> <脚本>`，不能用 `cd` 和 `--filter`）、单独使用的 ls、wc、echo，以及管道后的 head、tail、wc、grep、sort、cut。重定向和命令替换仍会被拦截；读取文件请用 Read、Grep、Glob 工具。被拦截时不要换一种方式绕过，在报告“需要主代理决定的事项”中说明。
 
 ## 输出格式（严格遵守）
 
