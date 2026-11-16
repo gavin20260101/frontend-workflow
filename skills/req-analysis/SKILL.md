@@ -1,8 +1,7 @@
 ---
 name: req-analysis
-description: 需求分析与方案制定，产出可交给 /req-implement 执行的方案文件。改 bug 请用 /req-bugfix。只在用户通过 /req-analysis 明确调用时使用。
-argument-hint: "[--worktree=<名字> --base=<起点>] [需求原文 | Superpowers 实施计划路径]"
-disable-model-invocation: true
+description: 需求分析与方案制定，产出可交给 /req-implement 执行的方案文件。改 bug 请用 /req-bugfix。只在用户输入 /req-analysis，或用户、自动化任务的指令点名要求运行 req-analysis 时使用，不要仅凭任务内容自行触发。参数带 --auto 时为无人值守模式。
+argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | Superpowers 实施计划路径]"
 ---
 
 # 需求分析与方案
@@ -11,7 +10,7 @@ disable-model-invocation: true
 
 内容是缺陷报告（以 `bug` 开头、带有【Bug】标记，或者描述的是现象、报错、复现步骤）时，提示用户改用 `/req-bugfix <问题描述>`，然后停下；用户明确要求仍按需求处理时再继续。
 
-分两个阶段进行，**每个阶段结束后都必须停下来，等待用户回复**。
+分两个阶段进行，**每个阶段结束后都必须停下来，等待用户回复**（带 `--auto` 的无人值守运行除外，见“无人值守模式”）。
 
 全程只读，不修改任何业务代码、测试代码或配置文件。独立模式唯一允许写入的是阶段二末尾的 `docs/plans/` 方案文件，以及下文说明的本机 git exclude 文件；Superpowers 补充模式只允许更新用户指定计划中的 `Frontend quality supplement (frontend-workflow)` 章节。
 
@@ -20,6 +19,12 @@ disable-model-invocation: true
 独立模式也应按 `references/frontend-quality-supplement.md` 考虑本次改动相关的 UI 状态、响应式断点、键盘与焦点、语义标签和既有设计系统；把适用项写入下方已有的验收、兼容和测试章节，不另造一份计划。
 
 独立模式下不调用 `superpowers:brainstorming`、`superpowers:writing-plans`：需求澄清由阶段一的待确认事项完成，方案由阶段二产出并经 req-plan-reviewer 审核；再走那两个技能会生成重复文档，并且会跳过方案审核。
+
+## 无人值守模式（`--auto`）
+
+参数开头的选项中带 `--auto` 时，本次是无人值守运行，没有人能回复。先读取 `references/unattended-mode.md`：下文所有“停下来”“等用户回复或确认”“请用户……”的地方都按它处理，不提问、不等待，并按它的要求写“无人值守记录”和结束块。`--auto` 可以和其他选项以任意顺序出现，先去掉它，再按下文解析其余参数。
+
+不带 `--auto` 时，本节和该文件都不适用，下文的每一处停顿都照原样停下等用户。
 
 ## Superpowers 计划补充模式
 

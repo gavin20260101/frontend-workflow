@@ -1,8 +1,7 @@
 ---
 name: req-bugfix
-description: 缺陷分析与修复方案：先在浏览器中复现问题、定位根因，再制定修复方案，产出可交给 /req-implement 执行的方案文件。只在用户通过 /req-bugfix 明确调用时使用。
-argument-hint: "[--worktree=<名字> --base=<起点>] [问题描述：现象、复现步骤、期望结果、环境]"
-disable-model-invocation: true
+description: 缺陷分析与修复方案：先在浏览器中复现问题、定位根因，再制定修复方案，产出可交给 /req-implement 执行的方案文件。只在用户输入 /req-bugfix，或用户、自动化任务的指令点名要求运行 req-bugfix 时使用，不要仅凭任务内容自行触发。参数带 --auto 时为无人值守模式。
+argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [问题描述：现象、复现步骤、期望结果、环境]"
 ---
 
 # 缺陷分析与修复方案
@@ -13,11 +12,17 @@ disable-model-invocation: true
 
 Superpowers 可用时，问题涉及复杂调用链、环境差异或连续修复失败，先使用 `superpowers:systematic-debugging` 完成根因调查，再给出修复方案。保留本技能的前端复现、浏览器证据和缺陷方案；不再额外调用 brainstorming/writing-plans 生成重复文档。修复阶段由 `/req-implement` 对行为测试执行 RED-GREEN。
 
-分两个阶段进行，**每个阶段结束后都必须停下来，等待用户回复**；小问题可以合并为一次，见阶段一的结束规则。
+分两个阶段进行，**每个阶段结束后都必须停下来，等待用户回复**；小问题可以合并为一次，见阶段一的结束规则。带 `--auto` 的无人值守运行除外，见“无人值守模式”。
 
 全程只读，不修改任何业务代码、测试代码或配置文件。唯一允许写入的是阶段二末尾的方案文件（docs/plans/ 目录下）、“保存方案文件”一节中说明的本机 git exclude 文件，以及复现问题时浏览器测试子代理保存在 docs/plans/browser-artifacts/ 下的截图。
 
 下文的“项目规则”指项目中的 CLAUDE.md 和 CLAUDE.local.md（存在时）。
+
+## 无人值守模式（`--auto`）
+
+参数开头的选项中带 `--auto` 时，本次是无人值守运行，没有人能回复。先读取 `references/unattended-mode.md`：下文所有“停下来”“等用户回复或确认”“请用户……”的地方都按它处理，不提问、不等待，并按它的要求写“无人值守记录”和结束块。`--auto` 可以和其他选项以任意顺序出现，先去掉它，再按下文解析其余参数。
+
+不带 `--auto` 时，本节和该文件都不适用，下文的每一处停顿都照原样停下等用户。
 
 ## 并行工作区（worktree）
 

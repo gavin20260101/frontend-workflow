@@ -1,8 +1,7 @@
 ---
 name: req-parallel
-description: 并行处理多个 bug 或需求：拆分批次、检查一次性准备，为每个任务生成在独立 worktree 中运行的第一条消息；“状态”模式汇总各 worktree 的进度、冲突风险和合并顺序。只在用户通过 /req-parallel 明确调用时使用。
-argument-hint: "[任务列表，每行一个] 或 [状态]"
-disable-model-invocation: true
+description: 并行处理多个 bug 或需求：拆分批次、检查一次性准备，为每个任务生成在独立 worktree 中运行的第一条消息；“状态”模式汇总各 worktree 的进度、冲突风险和合并顺序。只在用户输入 /req-parallel，或用户、自动化任务的指令点名要求运行 req-parallel 时使用，不要仅凭任务内容自行触发。参数带 --auto 时为无人值守模式。
+argument-hint: "[--auto] [任务列表，每行一个] 或 [状态]"
 ---
 
 # 并行处理多个任务
@@ -14,6 +13,12 @@ disable-model-invocation: true
 全程只读，不修改业务代码、测试代码或配置文件，不创建 worktree，不合并、不推送。唯一允许写入的是本机 git exclude 文件、跟踪文件 `docs/plans/parallel-YYYYMMDD.md`，以及经用户确认后创建的 `.worktreeinclude`。
 
 下文的“项目规则”指项目中的 CLAUDE.md 和 CLAUDE.local.md（存在时）。
+
+## 无人值守模式（`--auto`）
+
+参数开头的选项中带 `--auto` 时，本次是无人值守运行，没有人能回复。先读取 `references/unattended-mode.md`：下文所有“停下来”“等用户回复或确认”“请用户……”的地方都按它处理，不提问、不等待，并按它的要求写“无人值守记录”和结束块。`--auto` 可以和其他选项以任意顺序出现，先去掉它，再按下文解析其余参数。
+
+不带 `--auto` 时，本节和该文件都不适用，下文的每一处停顿都照原样停下等用户。
 
 ## 规划模式
 
