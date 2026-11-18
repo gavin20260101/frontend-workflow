@@ -312,7 +312,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 - 浏览器服务通过 `npx` 启动固定版本的 `@playwright/mcp@0.0.83` 和 `chrome-devtools-mcp@1.11.0`（首次启动时从 npm 下载）。插件启用后，五个浏览器服务会在每个会话中启动，但浏览器只在第一次使用工具时才打开（`browser-user-chrome` 只在使用时才连接你的 Chrome）。不需要时，可以在 `/mcp` 中停用对应的服务。
 - Context7：连接远程服务 `https://mcp.context7.com/mcp`，需要联网。查询内容（库名、版本、技术问题）会发送到 Context7 的服务器，流程规定查询中不写业务代码、内部地址和业务名称。不需要时可以在 `/mcp` 中停用。API key 是可选的，详见下一节。
 - 可选的官方插件 pr-review-toolkit（在插件市场 claude-plugins-official 中）：只在调用 `/req-implement` 时明确要求专项检查才用到。
-- `/req-implement` 不加载 karpathy-guidelines，“最少代码、不顺手重构”的原则已写在技能里。
+- 可选：[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) 插件中的 `karpathy-guidelines` 技能。安装后，`/req-implement` 在修改业务代码前加载它；它和流程说法不同的地方（何时提问、谁写测试、重试几次）以 `/req-implement` 为准。未安装时，按技能里内置的“最少代码、不顺手重构”原则执行。`/req-test` 只写测试，不加载它。
 
 ## 配置 Context7 API key（可选）
 

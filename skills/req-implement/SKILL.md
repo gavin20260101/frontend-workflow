@@ -10,7 +10,7 @@ argument-hint: "[--auto] [方案文件路径]"
 
 分工：你负责协调整个流程、写业务代码和运行完整检查；req-test-runner 子代理负责实现前的单元与组件 RED 测试、实现后补写的测试和测试修正；已有 E2E 框架时，req-browser-tester 负责实现前的 E2E RED 测试和实现后的浏览器验证；req-code-reviewer 子代理负责只读的完整审核。req-* 子代理都看不到本次对话，调用时必须把它们需要的信息写全。
 
-只用本技能这一套流程。输入是 Superpowers 计划时，计划只作为任务清单和设计依据：不加载 `superpowers:executing-plans`、`superpowers:subagent-driven-development`、`superpowers:test-driven-development`、`superpowers:verification-before-completion`，也不加载 karpathy-guidelines。用户调用本命令，即表示明确要求本次不使用这些技能。任务顺序、测试先行的范围、测试由谁写和验证、审核几轮，都按本技能。只有同一个问题修了一次仍失败、或根因不清时，才使用 `superpowers:systematic-debugging`（可用时）。
+只用本技能这一套流程。输入是 Superpowers 计划时，计划只作为任务清单和设计依据：不加载 `superpowers:executing-plans`、`superpowers:subagent-driven-development`、`superpowers:test-driven-development`、`superpowers:verification-before-completion`。用户调用本命令，即表示明确要求本次不使用这些技能。任务顺序、测试先行的范围、测试由谁写和验证、审核几轮，都按本技能。只有同一个问题修了一次仍失败、或根因不清时，才使用 `superpowers:systematic-debugging`（可用时）。karpathy-guidelines 不在排除之列：它只约束代码怎么写，不规定流程，在第二步“修改业务代码”前加载。
 
 计划中逐行写好的代码只作参考：实现时以计划的文件、验收标准和“不做什么”为准，代码按当前仓库的实际情况写。计划头部的 REQUIRED SUB-SKILL 说明和各任务里的 `git commit` 步骤都不执行：执行方式以本技能为准，提交只在第六步用户要求时进行。实现和审核过程中，也不要主动调用 `pr-review-toolkit:code-simplifier` 这类会改代码的代理，否则会改动审核员已经审过的代码。
 
@@ -18,11 +18,12 @@ argument-hint: "[--auto] [方案文件路径]"
 
 ## 上下文被压缩之后
 
-这个流程很长，中途上下文几乎一定会被压缩。压缩后本技能只保留开头的一部分，读过的规则文件也不再保留。发现自己看到的是之前对话的摘要、而不是原文时，先做三件事再继续，不要凭摘要往下做：
+这个流程很长，中途上下文几乎一定会被压缩。压缩后本技能只保留开头的一部分，读过的规则文件也不再保留。发现自己看到的是之前对话的摘要、而不是原文时，先做下面几件事再继续，不要凭摘要往下做：
 
 1. 用 Read 重新读取 `${CLAUDE_SKILL_DIR}/SKILL.md` 全文，以及 `${CLAUDE_PLUGIN_ROOT}/references/test-first-scope.md`。
 2. 本次运行带 `--auto` 时，重新读取 `${CLAUDE_PLUGIN_ROOT}/references/unattended-mode.md`。
 3. 读取方案文件“实现记录”里的“进度”小节，从记录的位置接着做；无人值守运行时自己启动的后台进程也记在那里。
+4. 可用技能中有 karpathy-guidelines 时，重新加载它（见第二步“修改业务代码”）。
 
 ## 无人值守模式（`--auto`）
 
@@ -109,7 +110,13 @@ argument-hint: "[--auto] [方案文件路径]"
 
 ### 修改业务代码
 
-写最少的代码满足验收标准，不顺手重构，不加方案没要求的抽象和防御性代码。方案已经过用户批准，只有方案没有覆盖的新疑问才需要问。
+可用技能中有 karpathy-guidelines（由 andrej-karpathy-skills 插件提供）时，在修改第一个业务文件前用 Skill 工具加载它，写和改业务代码时遵循，包括第三步至第五步里的修复。没有安装时跳过，按这一句执行：写最少的代码满足验收标准，不顺手重构，不加方案没要求的抽象和防御性代码。
+
+它的原则里有三处和本技能的流程说法不同，都以本技能为准：
+- “有疑问先问”：方案已经过用户批准，只有方案没有覆盖的新疑问才需要问，按下面第 3 点停下来；无人值守运行时按 `unattended-mode.md` 处理，不提问。
+- “先写测试，再让它通过”：哪些任务先写测试按上文“测试先行的范围”；测试由 req-test-runner 和 req-browser-tester 写，你不写也不改测试文件。
+- “循环到验证通过”：同一个问题修 3 次仍失败就停下来（第三步第 4 点、第四步第 8 点），不无限重试。
+
 1. 只修改方案中列出的业务文件。测试文件由 req-test-runner 和 req-browser-tester 负责，你不修改。
 2. 不做方案“不做什么”中排除的内容，也不顺手做“可选的局部整理与技术债”中的项目。
 3. 实现过程中如果发现方案需要调整（要多改文件、接口要变、需要新增依赖、触及高风险区域等），先停下来说明原因和建议的调整，得到确认后再继续，并同步更新方案文件。
