@@ -60,7 +60,7 @@ worktree 的创建权由 `/req-parallel` 负责。每个 worktree 中用 `/req-i
 并告诉用户怎么开始：
 1. 在桌面应用中点 **+ New**（或 Cmd+N）新开会话，粘贴对应的消息发送。命令会自动创建 worktree、对齐到所选起点并进入。不要打开输入框下方的 Worktree 开关：那样会在会话开始时就按默认起点建好 worktree，命令无法再对齐到所选起点。
 2. 每个会话会提示在 worktree 中安装依赖（`pnpm install` 等），并给出带端口的启动命令，例如第 1 个 worktree 用 5174、第 2 个用 5175。
-3. 分析完成后，在同一个会话中运行 `/req-implement`。
+3. 分析完成后，在同一个会话中先运行 `/clear`，再运行 `/req-implement <方案路径>`：会话仍在这个 worktree 里，分析阶段读过的源码不再带进实现阶段。新开会话会回到主目录，不要用。
 4. 并排查看：在侧边栏右键会话，选择 Open in → Split view。
 
 ### 5. 保存跟踪文件

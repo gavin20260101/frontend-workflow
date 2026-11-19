@@ -232,6 +232,17 @@ function isTestFile(relative) {
   return parts.slice(0, -1).some((p) => TEST_DIRS.has(p));
 }
 
+const ARTIFACT_NOTE_EXT = new Set(['.md', '.json', '.jsonl', '.txt']);
+
+function isArtifactNote(relative) {
+  const parts = relative.split(/[\\/]/);
+  const artifactParts = ARTIFACTS_DIR.split(path.sep);
+  if (parts.length <= artifactParts.length) return false;
+  if (!artifactParts.every((p, i) => parts[i] === p)) return false;
+  if (parts.includes('..')) return false;
+  return ARTIFACT_NOTE_EXT.has(path.extname(parts[parts.length - 1]).toLowerCase());
+}
+
 function checkTesterWrite(agentName, params, cwd) {
   const target = params.file_path ?? params.notebook_path;
   if (!target) return '无法确定要修改的文件';
@@ -239,6 +250,8 @@ function checkTesterWrite(agentName, params, cwd) {
   if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     return `${agentName} 只能修改项目内的测试文件：${target}`;
   }
+  // 浏览器测试员可以在截图目录写对照结论等文本文件（diff.md、checks.jsonl），不必把全文交回主会话转写
+  if (agentName === BROWSER_TESTER && isArtifactNote(relative)) return null;
   if (!isTestFile(relative)) {
     return `${agentName} 只能修改测试文件（*.test.*、*.spec.*，或 __tests__、__mocks__、__fixtures__、test、tests、e2e、fixtures 目录下的文件，快照除外）：${relative}`;
   }

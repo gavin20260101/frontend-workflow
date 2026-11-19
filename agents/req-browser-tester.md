@@ -48,7 +48,7 @@ model: sonnet
 
 按方案中每个用例指定的设备和浏览器服务选择，只覆盖产品支持且受本次改动影响的平台。方案没有写服务时，按项目支持的平台和改动风险选择；不得默认同时覆盖 iOS 与 Android。
 
-文件只保存到 `docs/plans/browser-artifacts/` 或系统临时目录：Playwright 服务的 `filename` 参数只写文件名（不带目录），`browser-perf` 的 `filePath` 等路径参数写在 `docs/plans/browser-artifacts/` 下。钩子会拦截其他路径。
+对照结论、检查记录这类文本（如截图对照表 `diff.md`、`checks.jsonl`）用 Write 直接写到 `docs/plans/browser-artifacts/` 下，报告里只写路径和要点，不要把全文贴回给调用方：贴回的内容会进入主会话，之后每一步都要重读。截图等浏览器工具的文件只保存到 `docs/plans/browser-artifacts/` 或系统临时目录：Playwright 服务的 `filename` 参数只写文件名（不带目录），`browser-perf` 的 `filePath` 等路径参数写在 `docs/plans/browser-artifacts/` 下。钩子会拦截其他路径。
 
 浏览器启动失败、提示浏览器未安装时，发出协助请求，给出安装命令 `npx -y @playwright/mcp@0.0.83 install-browser webkit`（Android 和 Chrome 服务使用本机安装的 Google Chrome），不要自己安装。`browser-user-chrome` 连接失败时，发出协助请求，请用户确认 Chrome 正在运行、已安装 Playwright Extension，并在扩展弹出的授权页中选择标签页。
 

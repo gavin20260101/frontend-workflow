@@ -178,7 +178,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
    ```
 
    插件会：轻量定位每个任务可能改动的文件；把改同一批文件或同一根因的任务合并、有依赖的分到后一批、每批最多 3 个；检查一次性准备（git 忽略 worktree 目录、`.worktreeinclude`）；请你为本批选择起点（远端默认分支、当前分支或其他分支）；为每个任务生成第一条消息，如 `/req-bugfix --worktree=bug-order-dup --base=develop <问题描述>`；把计划记录在 `docs/plans/parallel-YYYYMMDD.md`。
-2. **每个任务一个会话**：新开会话（+ New 或 Cmd+N），粘贴对应的消息。命令会自动创建并进入 worktree，检查依赖、分配端口（主目录 5173，第 1 个 worktree 5174，以此类推），然后照常分析；分析完在同一个会话中运行 `/req-implement`。
+2. **每个任务一个会话**：新开会话（+ New 或 Cmd+N），粘贴对应的消息。命令会自动创建并进入 worktree，检查依赖、分配端口（主目录 5173，第 1 个 worktree 5174，以此类推），然后照常分析；分析完在同一个会话中先 `/clear`，再运行 `/req-implement`（`/clear` 后会话仍在 worktree 里，分析时读过的内容不再带进实现阶段）。
 3. **查看进度、决定合并顺序**：回到主目录运行 `/req-parallel 状态`，看每个任务的阶段、未提交的改动、多个分支都改到的文件和建议的合并顺序；本批合并完后，它会生成下一批的消息。
 4. **收尾**：每个 worktree 完成后会提醒你先提交再归档。说“提交”时由 Claude 写提交说明并经你确认后提交；推送和合并由你执行。
 
@@ -293,7 +293,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 - `req-code-reviewer`、`req-plan-reviewer` 和名为 `code-reviewer` 的代理（它另可使用 `gh pr view / diff / list / checks / status`、`gh issue view / list`、`gh repo view`）：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
 - `req-test-runner` 和 `req-browser-tester`：只能修改项目内的测试文件（`*.test.*`、`*.spec.*`，或 `__tests__`、`__mocks__`、`__fixtures__`、`test`、`tests`、`e2e`、`fixtures` 目录下的文件，快照除外）；只能运行 package.json 中已有的脚本和只读 git 命令；会自动修改文件（`--fix`、`--write`、`-u` 等）、进入 watch 或交互模式（`--ui`、`cypress open`）、常驻（dev、serve 等）的脚本会被拦截，包括通过 run-s / run-p 间接调用的子脚本。名字看起来会发布、部署、安装或改动数据的脚本（deploy、release、publish、migrate、seed、reset 等）同样拦截。monorepo 子包的脚本用 `pnpm -C <子包目录> <脚本>`、`npm --prefix <子包目录> run <脚本>` 或 `yarn --cwd <子包目录> <脚本>` 运行，`cd` 和 `--filter` 不放行。
-- `req-browser-tester`：只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
+- `req-browser-tester`：另可在 `docs/plans/browser-artifacts/` 下写 `.md`、`.json`、`.jsonl`、`.txt` 结论文件（如截图对照表 `diff.md`）；只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
 - `pr-review-toolkit` 的专项检查子代理不在钩子的约束范围内，流程只在调用时要求它们只读。
 
 钩子是防误操作的护栏，不是沙箱。它需要 `node` 在 PATH 中，每次 Bash、文件编辑或 MCP 工具调用约增加 30 毫秒。
