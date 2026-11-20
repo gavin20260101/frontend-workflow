@@ -169,6 +169,8 @@ argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | S
 
 用户对方案提出修改意见时，更新同一个文件，不要新建。用户确认了“需要特别确认的事项”后，把状态改为 `待审批`。
 
+用户同意拆成几份子方案时，按 `${CLAUDE_PLUGIN_ROOT}/references/analysis-common.md` 的“实现规模与拆分”分成总方案和子方案几个文件保存，上面的章节按那里的分工放进对应文件；阶段二结束语里列出每份子方案的路径和实现顺序。
+
 ## 方案审核
 
 方案文件首次保存后，按 `${CLAUDE_PLUGIN_ROOT}/references/plan-review.md` 调用 req-plan-reviewer 审核一轮并处理意见，然后再给出阶段二的结束语。
