@@ -96,12 +96,27 @@ function splitCommand(command) {
 
 const toWords = (text) => text.split(/\s+/).map((w) => w.replace(/['"]/g, ''));
 
-// git [--no-pager] [-C <当前目录>] <只读子命令>；不允许 -c 等其他全局参数和写文件的参数
-function isReadonlyGit(words, cwd) {
+// 项目根目录：从启动目录往上找第一个含 .git 的目录（worktree 里 .git 是文件，同样算）。
+// 子代理的启动目录可能是项目里的子目录（例如主会话 cd 进了简报目录后再派子代理），
+// 写文件、截图目录、-C 这类判断按启动目录算会把项目里的测试文件误判为“项目外”，所以一律按项目根目录判断。
+// 往上找不到时（不是 git 仓库）退回启动目录。
+function findProjectRoot(start) {
+  let dir = start;
+  while (true) {
+    if (existsSync(path.join(dir, '.git'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return start;
+    dir = parent;
+  }
+}
+
+// git [--no-pager] [-C <当前目录或项目根目录>] <只读子命令>；不允许 -c 等其他全局参数和写文件的参数
+function isReadonlyGit(words, cwd, root) {
   let i = 1;
   while (words[i] === '--no-pager' || words[i] === '-C') {
     if (words[i] === '-C') {
-      if (!words[i + 1] || realpathOrSelf(path.resolve(cwd, words[i + 1])) !== realpathOrSelf(cwd)) return false;
+      const target = words[i + 1] ? realpathOrSelf(path.resolve(cwd, words[i + 1])) : null;
+      if (!target || (target !== realpathOrSelf(cwd) && target !== realpathOrSelf(root))) return false;
       i += 2;
     } else {
       i += 1;
@@ -147,14 +162,14 @@ function scriptBodies(scripts, name, seen = new Set()) {
   return bodies;
 }
 
-function checkReviewerBash(agentName, command, cwd) {
+function checkReviewerBash(agentName, command, cwd, root) {
   const { segments, unsafe } = splitCommand(command);
   if (unsafe) return `${agentName} 不能使用${unsafe}`;
   for (const { text, piped } of segments) {
     const words = toWords(text);
     const ok = piped
       ? PIPE_FILTERS.has(words[0])
-      : (words[0] === 'git' && isReadonlyGit(words, cwd)) || (agentName === 'code-reviewer' && words[0] === 'gh' && isReadonlyGh(words));
+      : (words[0] === 'git' && isReadonlyGit(words, cwd, root)) || (agentName === 'code-reviewer' && words[0] === 'gh' && isReadonlyGh(words));
     if (!ok) {
       const gh = agentName === 'code-reviewer' ? '和只读 gh 命令（gh pr view / diff / list / checks / status，gh issue view / list，gh repo view）' : '';
       return `${agentName} 只能执行只读 git 命令（${[...GIT_READONLY].join('、')}）${gh}，管道后只能接 ${[...PIPE_FILTERS].join('、')}；读取文件请用 Read、Grep、Glob 工具。被拦截的部分：${text}`;
@@ -163,7 +178,7 @@ function checkReviewerBash(agentName, command, cwd) {
   return null;
 }
 
-function checkTesterSegment(words, cwd) {
+function checkTesterSegment(words, cwd, root) {
   let i = 0;
   while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) {
     if (!ALLOWED_ENV.test(words[i])) return `不能设置环境变量 ${words[i].split('=')[0]}`;
@@ -171,7 +186,7 @@ function checkTesterSegment(words, cwd) {
   }
   const cmd = words[i];
   if (cmd === 'git') {
-    return isReadonlyGit(words.slice(i), cwd) ? null : `只能执行只读 git 命令（${[...GIT_READONLY].join('、')}；-C 只能指向当前项目目录）`;
+    return isReadonlyGit(words.slice(i), cwd, root) ? null : `只能执行只读 git 命令（${[...GIT_READONLY].join('、')}；-C 只能指向当前项目目录）`;
   }
   if (TESTER_READONLY.has(cmd)) return null;
   if (!PACKAGE_MANAGERS.has(cmd)) return `只能运行 package.json 中已有的脚本、只读 git 命令和 ${[...TESTER_READONLY].join('、')}`;
@@ -187,7 +202,7 @@ function checkTesterSegment(words, cwd) {
     const dir = inline ? first.slice(flag.length + 1) : words[i + 2];
     if (!dir) return `${flag} 后面要写子包目录`;
     const target = path.resolve(cwd, dir);
-    const relative = path.relative(cwd, target);
+    const relative = path.relative(root, target);
     if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return `${flag} 只能指向项目内的目录：${dir}`;
     const file = path.join(target, 'package.json');
     if (!existsSync(file)) return `目录 ${dir} 下没有 package.json`;
@@ -214,14 +229,14 @@ function checkTesterSegment(words, cwd) {
   return null;
 }
 
-function checkTesterBash(agentName, command, cwd) {
+function checkTesterBash(agentName, command, cwd, root) {
   const { segments, unsafe } = splitCommand(command);
   if (unsafe) return `${agentName} 不能使用${unsafe}`;
   for (const { text, piped } of segments) {
     const words = toWords(text);
     const reason = piped
       ? PIPE_FILTERS.has(words[0]) ? null : `管道后只能接 ${[...PIPE_FILTERS].join('、')}`
-      : checkTesterSegment(words, cwd);
+      : checkTesterSegment(words, cwd, root);
     if (reason) return `${agentName}：${reason}。被拦截的部分：${text}`;
   }
   return null;
@@ -246,10 +261,10 @@ function isArtifactNote(relative) {
   return ARTIFACT_NOTE_EXT.has(path.extname(parts[parts.length - 1]).toLowerCase());
 }
 
-function checkTesterWrite(agentName, params, cwd) {
+function checkTesterWrite(agentName, params, cwd, root) {
   const target = params.file_path ?? params.notebook_path;
   if (!target) return '无法确定要修改的文件';
-  const relative = path.relative(cwd, path.resolve(cwd, target));
+  const relative = path.relative(root, path.resolve(cwd, target));
   if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     return `${agentName} 只能修改项目内的测试文件：${target}`;
   }
@@ -262,10 +277,10 @@ function checkTesterWrite(agentName, params, cwd) {
 }
 
 // 资料读取员只能写 docs/plans/context/<文件名>.md，不能写子目录
-function checkContextWrite(params, cwd) {
+function checkContextWrite(params, cwd, root) {
   const target = params.file_path ?? params.notebook_path;
   if (!target) return '无法确定要写入的文件';
-  const relative = path.relative(cwd, path.resolve(cwd, target));
+  const relative = path.relative(root, path.resolve(cwd, target));
   const parts = relative.split(path.sep);
   const dirParts = CONTEXT_DIR.split(path.sep);
   const ok = !path.isAbsolute(relative)
@@ -284,9 +299,9 @@ function realpathOrSelf(p) {
   }
 }
 
-function checkBrowserFileParams(params, cwd) {
+function checkBrowserFileParams(params, cwd, root) {
   const tmp = os.tmpdir();
-  const allowedRoots = [path.join(cwd, ARTIFACTS_DIR), tmp, realpathOrSelf(tmp)];
+  const allowedRoots = [path.join(root, ARTIFACTS_DIR), tmp, realpathOrSelf(tmp)];
   for (const [key, value] of Object.entries(params)) {
     if (typeof value !== 'string' || !value) continue;
     if (key === 'filename') {
@@ -302,14 +317,14 @@ function checkBrowserFileParams(params, cwd) {
   return null;
 }
 
-function checkMcpTool(agentName, tool, params, cwd) {
+function checkMcpTool(agentName, tool, params, cwd, root) {
   if (agentName !== BROWSER_TESTER) return `${agentName} 不能使用 MCP 工具：${tool}`;
   if (!PLUGIN_BROWSER_TOOL.test(tool)) {
     return `${agentName} 只能使用插件自带的 browser-ios、browser-android、browser-chrome、browser-user-chrome、browser-perf 浏览器工具：${tool}`;
   }
   if (UNSAFE_BROWSER_TOOL.test(tool)) return `${agentName} 不能使用 browser_run_code_unsafe`;
   if (USER_CHROME_CLOSE_TOOL.test(tool)) return `${agentName} 不能在用户正在使用的 Chrome 中使用 browser_close`;
-  const fileReason = checkBrowserFileParams(params, cwd);
+  const fileReason = checkBrowserFileParams(params, cwd, root);
   return fileReason ? `${agentName}：${fileReason}` : null;
 }
 
@@ -329,19 +344,20 @@ const params = input.tool_input ?? {};
 const cwd = input.cwd || process.cwd();
 
 try {
+  const root = findProjectRoot(cwd);
   let reason = null;
   if (tool.startsWith('mcp__')) {
-    reason = checkMcpTool(agent, tool, params, cwd);
+    reason = checkMcpTool(agent, tool, params, cwd, root);
   } else if (agent === CONTEXT_READER) {
-    if (WRITE_TOOLS.has(tool)) reason = checkContextWrite(params, cwd);
-    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd);
+    if (WRITE_TOOLS.has(tool)) reason = checkContextWrite(params, cwd, root);
+    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd, root);
   } else if (REVIEWERS.has(agent)) {
     if (WRITE_TOOLS.has(tool)) reason = `${agent} 是只读审核员，不能修改任何文件`;
-    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd);
+    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd, root);
   } else if (WRITE_TOOLS.has(tool)) {
-    reason = checkTesterWrite(agent, params, cwd);
+    reason = checkTesterWrite(agent, params, cwd, root);
   } else if (tool === 'Bash') {
-    reason = checkTesterBash(agent, String(params.command ?? ''), cwd);
+    reason = checkTesterBash(agent, String(params.command ?? ''), cwd, root);
   }
   if (reason) deny(reason);
 } catch (error) {

@@ -17,7 +17,7 @@ disable-model-invocation: true
 
 1. 用 Read 重新读取 `${CLAUDE_SKILL_DIR}/SKILL.md` 全文。
 2. 重新读取 `${CLAUDE_PLUGIN_ROOT}/references/unattended-rule-switch.md`。
-3. 读取运行目录里的 `state.md`（路径见第一步第 7 点；不记得运行号时，看 `<git rev-parse --git-common-dir 的输出>/unattended/` 下最新的目录），从记录的位置接着做。
+3. 读取运行目录里的 `state.md`（路径见第一步第 8 点；不记得运行号时，看 `<git rev-parse --git-common-dir 的输出>/unattended/` 下最新的目录），从记录的位置接着做。
 
 ## 这次运行的授权从哪里来
 
@@ -40,8 +40,9 @@ disable-model-invocation: true
 3. **读项目规则**：记下检查命令、本地页面的启动命令和地址、提交说明的写法（语言、是否禁止 AI 署名）、高风险路径清单、架构负责人是谁。再看 `git log -5 --format=%B` 学现有提交说明的写法。
 4. **工作区必须干净**：`git status --porcelain` 有输出时停下，请用户先提交或收起自己的改动。之后的提交是按文件加的，混进用户没提交的改动就分不清了。
 5. **用量**：读任务书里的 `用量上限`（没写就是全部窗口 95）。按 `${CLAUDE_PLUGIN_ROOT}/references/unattended-mode.md` 的“用量上限”一节查一次：已经有窗口达到上限时，告诉用户各窗口的百分比和重置时间，然后停下；查不到用量时告诉用户“这次运行不会检查用量”，继续。这一点放在建分支之前，停下时不会留下空的分支和运行目录。
-6. **建运行分支**：记下当前分支和提交号。当前分支以 `auto/` 开头时，说明上一次运行的分支还没处理：告诉用户，请用户先切回原分支，或明确回复“在它上面继续”，然后停下。否则 `git switch -c auto/<YYYYMMDD-HHMM>`，所有提交都在这个分支上。
-7. **建运行目录**：`<git rev-parse --git-common-dir 的输出>/unattended/<YYYYMMDD-HHMM>/`。状态文件 `state.md` 和汇总 `report.md` 写在这里：在 `.git` 里面，不会被提交，也不出现在 `git status` 里。`state.md` 开头写上任务书路径、原分支和提交号、运行分支。用量上限和启动时各窗口的用量也写进去。
+6. **模型**：用 `mcp__ccd_session_mgmt__get_session` 查 `"self"` 的 `model`（没有这个工具时看系统提示里写的模型）。档位见 `${CLAUDE_PLUGIN_ROOT}/references/execution-tier.md`。本会话是编排会话：分析和缺陷定位在这里做，子会话只能用和它同级或更便宜的模型，所以它的模型就是这次运行能用到的最高档。任务书里有 A 档任务（任务写了 `档位：A`，或 `implement` 任务的方案“执行档位”是 A）而当前模型不是 `fable` 时：告诉用户是哪些任务，请用户把模型切到 `fable`、思考程度切到 `high` 后重新运行，或明确回复“按当前模型跑”，然后停下。用户选按当前模型跑的，把这句话记进 `state.md`，这些任务在汇总的“重点复核”里写“A 档按 <模型> 实现”。任务书里没有 A 档任务、当前是 `fable` 时，在开场说明里提一句“本次没有 A 档任务，编排会话用 opus 就够”，不停下。
+7. **建运行分支**：记下当前分支和提交号。当前分支以 `auto/` 开头时，说明上一次运行的分支还没处理：告诉用户，请用户先切回原分支，或明确回复“在它上面继续”，然后停下。否则 `git switch -c auto/<YYYYMMDD-HHMM>`，所有提交都在这个分支上。
+8. **建运行目录**：`<git rev-parse --git-common-dir 的输出>/unattended/<YYYYMMDD-HHMM>/`。状态文件 `state.md` 和汇总 `report.md` 写在这里：在 `.git` 里面，不会被提交，也不出现在 `git status` 里。`state.md` 开头写上任务书路径、原分支和提交号、运行分支。用量上限和启动时各窗口的用量也写进去。
 
 输出一段开场说明后进入第二步：运行分支、运行目录、任务顺序、哪些项目规则会被放开（对照 `${CLAUDE_PLUGIN_ROOT}/references/unattended-rule-switch.md` 列出本项目实际有的条款）、“开始后不再提问，回来看汇总”。
 
@@ -53,7 +54,7 @@ disable-model-invocation: true
 
 因为用量停下时，第五步的汇总最后要给出接着做的提示词，见第五步。
 
-**接着上一次运行做**：参数是 `<任务书路径> 继续 <运行号>` 时，不新建分支和运行目录。启动检查照做，但第 4、6 点改为：当前分支应当是 `auto/<运行号>`，工作区应当干净（不是时停下告诉用户）。读那次运行的 `state.md`：已提交、已测试、失败、跳过的任务不再做；“中断”的任务先用 `git stash list` 找到它的 stash 并 `git stash pop` 恢复改动，再用原来的命令重新调用，插件会按方案里的进度记录接着做（方案还没保存就中断的，从头做这个任务）；然后按顺序做“未开始”的任务。汇总接着写在同一个 `report.md` 里。
+**接着上一次运行做**：参数是 `<任务书路径> 继续 <运行号>` 时，不新建分支和运行目录。启动检查照做，但第 4、7 点改为：当前分支应当是 `auto/<运行号>`，工作区应当干净（不是时停下告诉用户）。读那次运行的 `state.md`：已提交、已测试、失败、跳过的任务不再做；“中断”的任务先用 `git stash list` 找到它的 stash 并 `git stash pop` 恢复改动，再用原来的命令重新调用，插件会按方案里的进度记录接着做（方案还没保存就中断的，从头做这个任务）；然后按顺序做“未开始”的任务。汇总接着写在同一个 `report.md` 里。
 
 连续 3 个任务失败时，停止后面的任务，直接去第五步：多半是环境出了问题，接着跑只会重复失败。
 
@@ -86,12 +87,13 @@ disable-model-invocation: true
 
 ### 什么时候开子会话
 
-默认都在当前会话里做。只在当前会话的上下文已经不适合再做一个完整任务时才开，判断依据：
+默认都在当前会话里做。下面几种情况才开：
 
 - 这次运行里上下文已经被压缩过（你看到的是之前对话的摘要而不是原文），而且剩下的是代码开发任务。
 - 计划里这个任务写了 `隔离：是`。
+- 实现的档位比编排会话的模型低：方案“执行档位”要求的主会话模型（任务书写了 `档位：` 时以任务书为准）比当前会话便宜，例如编排会话是 `fable`、方案是 B 或 C 档。这时只把 `req-implement` 放进子会话，用档位要求的模型跑；分析和缺陷定位已经在当前会话里做完，不用挪。实现是一个任务里用量最大的部分，在编排会话的模型上跑会按高一档的价格计，还会把实现过程全部堆进编排会话的上下文。
 
-开法：`mcp__ccd_session__start_session`，`initiation: "user_asked"`，`context: "fresh"`，`use_worktree: false`，`wake_when_done: true`，不传 `cwd`。`prompt` 只写一行插件命令，例如 `/frontend-workflow:req-implement --auto docs/plans/xxx.md`；`background` 写明：这是 `/unattended` 运行 `<运行号>` 的任务 `<Tn>`，由全局 CLAUDE.md 的无人值守开关授权，不要提交（由编排会话核验后提交），回复用中文。开出后结束这一轮等通知，不轮询。被唤醒后用 `mcp__ccd_session_mgmt__list_events` 读它的结束块，再回到当前会话做核验和提交。
+开法：`mcp__ccd_session__start_session`，`initiation: "user_asked"`，`context: "fresh"`，`use_worktree: false`，`wake_when_done: true`，不传 `cwd`。按档位开的子会话再传 `model`（档位要求的主会话模型，写应用模型菜单里的模型 ID，例如 `claude-opus-5-5`；被拒绝时结果会列出可用的 ID，换成对应的那个）和 `effort`（档位要求的思考程度）；其余两种情况不传，沿用编排会话的。`prompt` 只写一行插件命令，例如 `/frontend-workflow:req-implement --auto docs/plans/xxx.md`；`background` 写明：这是 `/unattended` 运行 `<运行号>` 的任务 `<Tn>`，由全局 CLAUDE.md 的无人值守开关授权，不要提交（由编排会话核验后提交），回复用中文。开出后结束这一轮等通知，不轮询。被唤醒后用 `mcp__ccd_session_mgmt__list_events` 读它的结束块，再回到当前会话做核验和提交。
 
 子会话有上限：实测同一个会话被子会话通知连续唤醒约 8 次后，再开会被自动模式拦下。一次运行最多开 6 个；开子会话被拒绝、或没有这个工具（不在桌面应用里）时不重试、不换方式，剩下的任务回到当前会话里做。
 

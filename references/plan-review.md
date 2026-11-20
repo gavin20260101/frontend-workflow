@@ -1,6 +1,6 @@
 # 方案审核（req-plan-reviewer）
 
-方案文件保存后、交给用户审批前，调用一次 `req-plan-reviewer` 子代理（使用 Opus 模型，思考程度 high）审核方案。只审核一轮，不循环复审。
+方案文件保存后、交给用户审批前，调用一次 `req-plan-reviewer` 子代理审核方案。只审核一轮，不循环复审。模型和思考程度按方案“执行档位”一节和 `${CLAUDE_PLUGIN_ROOT}/references/execution-tier.md` 的“子代理按档位调用”：A 档在调用时传 `model: fable`、`effort: high`，B、C 档用子代理文件的默认值（Opus，high）。
 
 ## 调用
 

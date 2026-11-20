@@ -34,11 +34,12 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
    - 需求要参考另一个项目的源码，或附了 UI 设计图时，交给 `req-context-reader` 子代理（Sonnet，只是定位类问题时用 Haiku）去读，完整结论写到 `docs/plans/context/`，主会话只拿要点，方案里记下报告路径。实现阶段按报告写代码，不再通读参考项目或打开原图；浏览器测试时对照设计规格核对截图。
    - 方案太大建议拆成几份子方案时，每份照常审核和测试，不攒到最后；还没有页面的子方案把浏览器测试放到第一次出现页面的那份，最后一份只加几条贯穿各份的回归流程。拆分后分文件保存：一份总方案（需求、AC、待确认事项、拆分说明）加每份子方案一个文件，实现记录和报告写在各自的子方案里，后面的子方案只引用前面报告的路径，实现会话不用把整份大文件读进来。
    - 阶段二：方案审核单（修改的文件、不做什么、替代方案、兼容性风险、埋点变更、测试方案、回滚方式等），保存到 `docs/plans/YYYYMMDD-名称.md`。
-   - 方案审核：保存后由 `req-plan-reviewer`（Opus 模型）对照代码审核一轮，主代理逐条核实后采纳或写明不采纳的理由，会改变需求或范围的意见转为待确认事项交给你；处理结果记在方案的“方案审核记录”中。`/req-bugfix` 的修复方案和 Superpowers 计划补充同样会审核。停下等你审批。
+   - 执行档位：按风险和改动性质定 A、B、C 档，写进方案，并在结束语里告诉你实现前把模型和思考程度切到什么（见“各阶段使用的模型”）。
+   - 方案审核：保存后由 `req-plan-reviewer`（A 档用 Fable，其余用 Opus）对照代码审核一轮，主代理逐条核实后采纳或写明不采纳的理由，会改变需求或范围的意见转为待确认事项交给你；处理结果记在方案的“方案审核记录”中。`/req-bugfix` 的修复方案和 Superpowers 计划补充同样会审核。停下等你审批。
    - 测试方案按层次组织：每条验收标准由哪一层验证（单元 / 组件 / 浏览器功能 / 真机手工），每层具体到用例。
 2. `/req-implement <方案文件路径>`（需求方案、缺陷修复方案或已批准的 Superpowers 计划都可执行）
    - 检查方案是否完整、代码是否偏离方案，记录实现基准（当前提交号）。
-   - 开工前输出执行确认。只有命中高风险区域、有会让实现中途停下的事项、有按假设处理的条目或需要你协助时才停下等你确认，其余情况直接开始。
+   - 开工前输出执行确认，其中核对当前会话的模型是否符合方案的执行档位。只有命中高风险区域、有会让实现中途停下的事项、有按假设处理的条目、需要你协助，或 A 档方案而当前模型低于 Fable 时才停下等你确认，其余情况直接开始。
    - 测试先行按风险分：业务行为、出错和兜底路径、缺陷回归“先写测试”——由 `req-test-runner` 按任务简报做 RED（相邻的独立任务合并成一次），主代理实现后自己做 GREEN 并核对测试没被改动；骨架、配置、构建与检查脚本、样式等“实现后补测试”——主代理先实现，再由 `req-test-runner` 一次补齐测试。已有 E2E 框架时由 `req-browser-tester` 做 E2E 用例的 RED。
    - 每个任务归哪一类，按 `references/test-first-scope.md` 的定义：方案里标注过的按标注执行，不能把“先写测试”改成“实现后补测试”；审核员会核对归类。
    - 全部任务完成后，主代理自己把检查命令完整运行一次；之后修改代码只重跑失败的命令和相关测试，写报告前如果代码又改过，再完整运行一次。E2E 只跑方案列出的用例文件，全量 E2E 留给 CI 或发版前。有测试问题或归因拿不准时才派 `req-test-runner`。
@@ -276,20 +277,29 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 ## 各阶段使用的模型
 
-子代理的模型和思考程度写在 `agents/*.md` 的 frontmatter 中（`model`、`effort`），不受主会话模型影响：
+模型按“执行档位”分配，规则在 `references/execution-tier.md`。`/req-analysis`、`/req-bugfix` 写方案时定档：
 
-| 阶段 | 执行者 | 模型 | 思考程度 |
-|------|--------|------|---------|
-| 需求分析、写方案 | 主会话 | 主会话当前模型 | 主会话设置 |
-| 方案审核 | `req-plan-reviewer` | Opus（`opus`） | high |
-| 写业务代码 | 主会话 | 主会话当前模型；建议把会话模型设为 Opus 5.5 | 主会话设置 |
-| 单元、组件测试 | `req-test-runner` | Sonnet（`sonnet`） | 默认 |
-| 浏览器功能测试 | `req-browser-tester` | Sonnet（`sonnet`） | 默认 |
-| 代码审核 | `req-code-reviewer` | Opus（`opus`） | high |
-| 读参考项目、设计图 | `req-context-reader` | Sonnet（`sonnet`）；只是定位和列清单时调用方指定 Haiku | 默认 |
+| 档位 | 什么样的方案 | 实现时的主会话 |
+|------|-------------|---------------|
+| A | L3；命中高风险区域；涉及钱、支付、权限、合规或失败关闭；涉及并发、重试、单飞、定时刷新、实时连接、会话令牌这类状态机；缺陷根因在时序或环境差异 | Fable，high |
+| B | 其余 | Opus，high |
+| C | L1，只改文案、Token 或样式取值、单个组件的视觉、文档 | Opus，medium |
 
-- 写测试、跑命令、按用例操作浏览器用 Sonnet；判断方案和代码对不对的两个审核员用 Opus，思考程度 high。任务要改的文件命中高风险区域时，`/req-implement` 调用 `req-test-runner` 写测试会临时指定 Opus。测试子代理的结果不准时，可以把对应文件的 `model` 改回 `opus`。
-- 写的是别名，会自动跟随最新版本（目前为 Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。想让审核员用更强的模型，把两个审核员文件的 `model` 改为 `fable`。
+主会话的模型插件改不了（技能里写的模型只管当前这一轮，你发下一条消息就恢复），所以方案的结束语会告诉你实现前切到什么，`/req-implement` 开始时再核对一次：A 档而当前模型低于 Fable 时停下来问你，其他情况只提醒。分析阶段在你当时选的模型上跑；要做的是大模块时，分析也建议用 Fable。
+
+子代理的默认模型写在 `agents/*.md` 的 frontmatter 中（B 档的设置），按档位不同时，调用时传 `model`、`effort` 参数覆盖（需要 Claude Code v2.1.292 及以上，低版本只覆盖模型）：
+
+| 执行者 | 默认 | 按档位调整 |
+|--------|------|-----------|
+| `req-plan-reviewer` | Opus，high | A 档：Fable，high |
+| `req-code-reviewer` | Opus，high | A 档第 1 轮：Fable，high；C 档：Opus，medium；第 2 轮起只复核上一轮的问题，A、B 档都用默认 |
+| `req-test-runner` | Sonnet | A、B 档写业务行为、出错路径、缺陷回归的 RED 测试：Opus；改高风险区域的文件：Opus |
+| `req-browser-tester` | Sonnet | 对照设计图核对截图时思考程度 high |
+| `req-context-reader` | Sonnet | 只是定位和列清单：Haiku；要移植的源码涉及并发、会话、加密、支付或失败关闭：Opus |
+
+- 为什么这样分：审核员和 RED 测试决定问题在哪一步被发现。A 档的问题多半出在状态机和失败路径上，第一次就用最强的模型审，比审出阻断再修、再补测试、再复审省；RED 用例写全了，规格里有而实现漏掉的状态在实现前就会失败。补测试、跑命令、按用例操作浏览器这类跟着实现走的工作，Sonnet 够用。
+- 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。
+- `/unattended` 的编排会话负责分析，而它开的子会话只能用同级或更便宜的模型，所以任务书里有 A 档任务时，启动前要把编排会话切到 Fable。B、C 档任务的实现会放进子会话，按档位降到 Opus 跑。
 - 审核员调用失败时，方案审核会跳过并在输出中注明；代码审核会用同样的输入再调用一次，仍然失败就停下来由你决定。
 
 ## 子代理守卫钩子
@@ -301,6 +311,8 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 - `req-browser-tester`：另可在 `docs/plans/browser-artifacts/` 下写 `.md`、`.json`、`.jsonl`、`.txt` 结论文件（如截图对照表 `diff.md`）；只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
 - `req-context-reader`：只能运行当前项目里的只读 git 命令（读参考项目用 Read、Grep、Glob），只能在 `docs/plans/context/` 下写 `.md` 报告，不能使用 MCP 工具。不读 `.env` 和密钥文件只写在它的说明里，钩子不拦 Read：拦的话所有会话的每次读文件都要多跑一次钩子。
 - `pr-review-toolkit` 的专项检查子代理不在钩子的约束范围内，流程只在调用时要求它们只读。
+
+路径一律按项目根目录（从子代理的启动目录往上找到的第一个含 `.git` 的目录）判断：主会话 `cd` 进了简报目录之类的子目录后再派子代理，子代理也能照常写项目根目录下的测试文件。
 
 钩子是防误操作的护栏，不是沙箱。它需要 `node` 在 PATH 中，每次 Bash、文件编辑或 MCP 工具调用约增加 30 毫秒。
 
@@ -338,7 +350,7 @@ key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文�
 
 ## 维护说明
 
-`req-analysis`、`req-bugfix` 和 `req-test` 共用的规则放在 `references/` 里，各只有一份：进入 worktree 和环境检查（`worktree-setup.md`）、检查命令识别和浏览器测试条件（`project-inventory.md`）、风险等级、处理用户的答复和“需要特别确认的事项”的触发条件（`analysis-common.md`）、方案文件的 git 忽略判断和状态取值（`plan-file.md`）、查询第三方库文档（`third-party-docs.md`）、调用资料读取子代理（`context-reader.md`）；Superpowers 计划补充规则在 `frontend-quality-supplement.md`。改这些规则时只改对应的文件。
+`req-analysis`、`req-bugfix` 和 `req-test` 共用的规则放在 `references/` 里，各只有一份：进入 worktree 和环境检查（`worktree-setup.md`）、检查命令识别和浏览器测试条件（`project-inventory.md`）、风险等级、处理用户的答复和“需要特别确认的事项”的触发条件（`analysis-common.md`）、方案文件的 git 忽略判断和状态取值（`plan-file.md`）、查询第三方库文档（`third-party-docs.md`）、调用资料读取子代理（`context-reader.md`）、执行档位和各子代理按档位用的模型（`execution-tier.md`，`req-implement` 和 `unattended` 也读它）；Superpowers 计划补充规则在 `frontend-quality-supplement.md`。改这些规则时只改对应的文件。
 
 技能正文引用规则文件时一律写 `${CLAUDE_PLUGIN_ROOT}/references/<文件名>`，加载技能时会替换成实际路径。四个长流程的技能（`req-analysis`、`req-bugfix`、`req-implement`、`req-test`）和 `unattended` 开头都有“上下文被压缩之后”一节，新增规则文件时记得在那一节里点名。“项目规则”包括哪些文件，在五个 `req-*` 技能、`unattended`、`unattended-plan` 和四个子代理里各写了一遍，修改时要同步。
 
