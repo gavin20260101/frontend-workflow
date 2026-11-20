@@ -1,5 +1,6 @@
 // PreToolUse 钩子：req-code-reviewer、req-plan-reviewer 和任何名为 code-reviewer 的代理（目前是 pr-review-toolkit:code-reviewer；Superpowers 7.x 已不再自带代理）只读；req-test-runner 和 req-browser-tester 只改测试文件、只运行已有脚本；
 // req-browser-tester 只能使用插件自带的浏览器服务，不能关闭用户 Chrome 中的标签页，浏览器工具只能把文件写到截图目录或临时目录。
+// req-context-reader 只能运行只读 git 命令，只能在 docs/plans/context/ 下写 .md 报告，不能使用 MCP 工具。
 // 主会话和其他代理的调用一律放行。拦截时以退出码 2 结束，stderr 的内容会返回给子代理。
 // 这是防误操作的护栏，不是沙箱。
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
@@ -9,6 +10,8 @@ import path from 'node:path';
 const REVIEWERS = new Set(['req-code-reviewer', 'req-plan-reviewer', 'code-reviewer']);
 const BROWSER_TESTER = 'req-browser-tester';
 const TESTERS = new Set(['req-test-runner', BROWSER_TESTER]);
+const CONTEXT_READER = 'req-context-reader';
+const CONTEXT_DIR = path.join('docs', 'plans', 'context');
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 // 插件自带浏览器服务的工具名：mcp__[plugin_<插件名>_]browser-(ios|android|chrome|user-chrome|perf)__<工具>
 const PLUGIN_BROWSER_TOOL = /^mcp__(plugin_.+_)?browser-(ios|android|chrome|user-chrome|perf)__/;
@@ -258,6 +261,21 @@ function checkTesterWrite(agentName, params, cwd) {
   return null;
 }
 
+// 资料读取员只能写 docs/plans/context/<文件名>.md，不能写子目录
+function checkContextWrite(params, cwd) {
+  const target = params.file_path ?? params.notebook_path;
+  if (!target) return '无法确定要写入的文件';
+  const relative = path.relative(cwd, path.resolve(cwd, target));
+  const parts = relative.split(path.sep);
+  const dirParts = CONTEXT_DIR.split(path.sep);
+  const ok = !path.isAbsolute(relative)
+    && !parts.includes('..')
+    && parts.length === dirParts.length + 1
+    && dirParts.every((p, i) => parts[i] === p)
+    && path.extname(relative).toLowerCase() === '.md';
+  return ok ? null : `${CONTEXT_READER} 只能在 docs/plans/context/ 下写 .md 报告文件：${target}`;
+}
+
 function realpathOrSelf(p) {
   try {
     return realpathSync(p);
@@ -304,7 +322,7 @@ try {
 
 // agent_type 可能是带插件名的 "<插件名>:req-test-runner"，也可能是裸名
 const agent = String(input.agent_type ?? '').split(':').pop();
-if (!REVIEWERS.has(agent) && !TESTERS.has(agent)) process.exit(0);
+if (!REVIEWERS.has(agent) && !TESTERS.has(agent) && agent !== CONTEXT_READER) process.exit(0);
 
 const tool = String(input.tool_name ?? '');
 const params = input.tool_input ?? {};
@@ -314,6 +332,9 @@ try {
   let reason = null;
   if (tool.startsWith('mcp__')) {
     reason = checkMcpTool(agent, tool, params, cwd);
+  } else if (agent === CONTEXT_READER) {
+    if (WRITE_TOOLS.has(tool)) reason = checkContextWrite(params, cwd);
+    else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd);
   } else if (REVIEWERS.has(agent)) {
     if (WRITE_TOOLS.has(tool)) reason = `${agent} 是只读审核员，不能修改任何文件`;
     else if (tool === 'Bash') reason = checkReviewerBash(agent, String(params.command ?? ''), cwd);

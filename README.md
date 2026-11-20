@@ -31,8 +31,10 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 
 1. `/req-analysis <需求原文>`
    - 阶段一：需求复述、验收标准（AC）、待确认事项（Q）、相似实现、代码定位、影响范围、测试现状、风险等级初评。停下等你答复。
+   - 需求要参考另一个项目的源码，或附了 UI 设计图时，交给 `req-context-reader` 子代理（Sonnet，只是定位类问题时用 Haiku）去读，完整结论写到 `docs/plans/context/`，主会话只拿要点，方案里记下报告路径。实现阶段按报告写代码，不再通读参考项目或打开原图；浏览器测试时对照设计规格核对截图。
+   - 方案太大建议拆成几份子方案时，每份照常审核和测试，不攒到最后；还没有页面的子方案把浏览器测试放到第一次出现页面的那份，最后一份只加几条贯穿各份的回归流程。
    - 阶段二：方案审核单（修改的文件、不做什么、替代方案、兼容性风险、埋点变更、测试方案、回滚方式等），保存到 `docs/plans/YYYYMMDD-名称.md`。
-   - 方案审核：保存后由 `req-plan-reviewer`（Fable 模型）对照代码审核一轮，主代理逐条核实后采纳或写明不采纳的理由，会改变需求或范围的意见转为待确认事项交给你；处理结果记在方案的“方案审核记录”中。`/req-bugfix` 的修复方案和 Superpowers 计划补充同样会审核。停下等你审批。
+   - 方案审核：保存后由 `req-plan-reviewer`（Opus 模型）对照代码审核一轮，主代理逐条核实后采纳或写明不采纳的理由，会改变需求或范围的意见转为待确认事项交给你；处理结果记在方案的“方案审核记录”中。`/req-bugfix` 的修复方案和 Superpowers 计划补充同样会审核。停下等你审批。
    - 测试方案按层次组织：每条验收标准由哪一层验证（单元 / 组件 / 浏览器功能 / 真机手工），每层具体到用例。
 2. `/req-implement <方案文件路径>`（需求方案、缺陷修复方案或已批准的 Superpowers 计划都可执行）
    - 检查方案是否完整、代码是否偏离方案，记录实现基准（当前提交号）。
@@ -205,13 +207,14 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 子代理 | `req-test-runner` | 编写和修正单元测试、组件测试，运行检查命令，分析失败原因；只改测试文件 |
 | 子代理 | `req-browser-tester` | 实现前为已有 E2E 框架编写 RED 用例，实现后执行浏览器功能测试；只改测试文件 |
 | 子代理 | `req-code-reviewer` | 对照方案独立审核本次改动和测试结果；只读 |
+| 子代理 | `req-context-reader` | 替主会话读参考项目源码、把设计图整理成规格，结论写到 `docs/plans/context/`；不改代码 |
 | MCP 服务 | `browser-ios` | WebKit 内核 + iPhone 15 模拟，无头、隔离，近似 iOS Safari；用于产品支持且本次改动影响 iOS 的场景 |
 | MCP 服务 | `browser-android` | 本机 Chrome + Pixel 7 模拟，无头、隔离，近似 Android 浏览器和 WebView；用于产品支持且本次改动影响 Android 的场景 |
 | MCP 服务 | `browser-chrome` | 可见 Chrome：本机 Chrome 窗口 + Pixel 7 模拟，测试专用配置，登录态会保留 |
 | MCP 服务 | `browser-user-chrome` | 你正在用的 Chrome：通过 Playwright Extension 连接，只能操作你授权的标签页 |
 | MCP 服务 | `browser-perf` | Chrome 官方 DevTools MCP（`chrome-devtools-mcp@1.11.0`）：弱网和 CPU 降速、性能录制、Lighthouse、堆快照 |
 | MCP 服务 | `context7` | Context7 远程服务（`https://mcp.context7.com/mcp`）：查询第三方库指定版本的文档 |
-| 钩子 | `hooks/guard-subagents.mjs` | 强制执行上面四个子代理的权限边界 |
+| 钩子 | `hooks/guard-subagents.mjs` | 强制执行上面五个子代理的权限边界 |
 | 参考 | `references/plan-review.md` | 调用方案审核员和处理审核意见的统一流程，供 `req-analysis`、`req-bugfix` 引用 |
 | 参考 | `references/frontend-quality-supplement.md` | 将前端验收、UI 状态、响应式、无障碍和测试映射补入同一份计划 |
 | 参考 | `references/unattended-mode.md` | 无人值守模式（`--auto`）下各类停顿点的处理规则、记录格式和结束块，供五个技能引用 |
@@ -224,6 +227,7 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 参考 | `references/analysis-common.md` | 风险等级、处理用户的答复、“需要特别确认的事项”的触发条件，供 `req-analysis`、`req-bugfix` 引用 |
 | 参考 | `references/plan-file.md` | 方案文件保存前的 git 忽略判断，以及方案状态的全部取值 |
 | 参考 | `references/third-party-docs.md` | 用 Context7 查询第三方库文档的规则 |
+| 参考 | `references/context-reader.md` | 什么时候、怎么调用 `req-context-reader`，报告怎么核对、怎么写进方案，供 `req-analysis`、`req-bugfix` 引用 |
 | 外部子代理（可选） | `pr-review-toolkit:silent-failure-hunter`、`pr-review-toolkit:pr-test-analyzer` | 只在调用 `/req-implement` 时明确要求才用：审核前的专项检查 |
 
 ## 项目规则（可选，推荐）
@@ -277,23 +281,25 @@ Superpowers 安装后仍可使用独立模式：直接把需求交给 `/req-anal
 | 阶段 | 执行者 | 模型 | 思考程度 |
 |------|--------|------|---------|
 | 需求分析、写方案 | 主会话 | 主会话当前模型 | 主会话设置 |
-| 方案审核 | `req-plan-reviewer` | Fable（`fable`） | high |
+| 方案审核 | `req-plan-reviewer` | Opus（`opus`） | high |
 | 写业务代码 | 主会话 | 主会话当前模型；建议把会话模型设为 Opus 5.5 | 主会话设置 |
 | 单元、组件测试 | `req-test-runner` | Sonnet（`sonnet`） | 默认 |
 | 浏览器功能测试 | `req-browser-tester` | Sonnet（`sonnet`） | 默认 |
-| 代码审核 | `req-code-reviewer` | Fable（`fable`） | high |
+| 代码审核 | `req-code-reviewer` | Opus（`opus`） | high |
+| 读参考项目、设计图 | `req-context-reader` | Sonnet（`sonnet`）；只是定位和列清单时调用方指定 Haiku | 默认 |
 
-- 写测试、跑命令、按用例操作浏览器用 Sonnet；判断方案和代码对不对的两个审核员用 Fable。任务要改的文件命中高风险区域时，`/req-implement` 调用 `req-test-runner` 写测试会临时指定 Opus。测试子代理的结果不准时，可以把对应文件的 `model` 改回 `opus`。
-- 写的是别名，会自动跟随最新版本（目前为 Fable 5.2、Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。
-- 账号无法使用 Fable 时，方案审核会跳过并在输出中注明；代码审核调用失败时会改用 Opus 重试一次；想固定下来，把 `req-code-reviewer.md` 的 `model` 改为 `opus` 或删掉这一行（跟随主会话）。
+- 写测试、跑命令、按用例操作浏览器用 Sonnet；判断方案和代码对不对的两个审核员用 Opus，思考程度 high。任务要改的文件命中高风险区域时，`/req-implement` 调用 `req-test-runner` 写测试会临时指定 Opus。测试子代理的结果不准时，可以把对应文件的 `model` 改回 `opus`。
+- 写的是别名，会自动跟随最新版本（目前为 Opus 5.5、Sonnet 5.5）。需要固定版本时改成完整模型 ID，如 `claude-sonnet-5-5`。想让审核员用更强的模型，把两个审核员文件的 `model` 改为 `fable`。
+- 审核员调用失败时，方案审核会跳过并在输出中注明；代码审核会用同样的输入再调用一次，仍然失败就停下来由你决定。
 
 ## 子代理守卫钩子
 
-钩子约束本插件的四个子代理，并对名为 `code-reviewer` 的代理（目前是 pr-review-toolkit 的）施加只读限制；主会话和其他代理不受影响：
+钩子约束本插件的五个子代理，并对名为 `code-reviewer` 的代理（目前是 pr-review-toolkit 的）施加只读限制；主会话和其他代理不受影响：
 
 - `req-code-reviewer`、`req-plan-reviewer` 和名为 `code-reviewer` 的代理（它另可使用 `gh pr view / diff / list / checks / status`、`gh issue view / list`、`gh repo view`）：只能运行只读 git 命令（diff、status、log、show 等，管道后可接 head、tail、wc、grep），不能修改任何文件，不能使用 MCP 工具。
 - `req-test-runner` 和 `req-browser-tester`：只能修改项目内的测试文件（`*.test.*`、`*.spec.*`，或 `__tests__`、`__mocks__`、`__fixtures__`、`test`、`tests`、`e2e`、`fixtures` 目录下的文件，快照除外）；只能运行 package.json 中已有的脚本和只读 git 命令；会自动修改文件（`--fix`、`--write`、`-u` 等）、进入 watch 或交互模式（`--ui`、`cypress open`）、常驻（dev、serve 等）的脚本会被拦截，包括通过 run-s / run-p 间接调用的子脚本。名字看起来会发布、部署、安装或改动数据的脚本（deploy、release、publish、migrate、seed、reset 等）同样拦截。monorepo 子包的脚本用 `pnpm -C <子包目录> <脚本>`、`npm --prefix <子包目录> run <脚本>` 或 `yarn --cwd <子包目录> <脚本>` 运行，`cd` 和 `--filter` 不放行。
 - `req-browser-tester`：另可在 `docs/plans/browser-artifacts/` 下写 `.md`、`.json`、`.jsonl`、`.txt` 结论文件（如截图对照表 `diff.md`）；只能使用插件自带的五个浏览器服务，不能使用 Claude in Chrome、桌面应用内置浏览器等其他浏览器工具；不能使用 `browser_run_code_unsafe`；不能在 `browser-user-chrome` 中使用 `browser_close`；浏览器工具写文件（截图、性能录制、堆快照）只能写到 `docs/plans/browser-artifacts/` 或系统临时目录。
+- `req-context-reader`：只能运行当前项目里的只读 git 命令（读参考项目用 Read、Grep、Glob），只能在 `docs/plans/context/` 下写 `.md` 报告，不能使用 MCP 工具。不读 `.env` 和密钥文件只写在它的说明里，钩子不拦 Read：拦的话所有会话的每次读文件都要多跑一次钩子。
 - `pr-review-toolkit` 的专项检查子代理不在钩子的约束范围内，流程只在调用时要求它们只读。
 
 钩子是防误操作的护栏，不是沙箱。它需要 `node` 在 PATH 中，每次 Bash、文件编辑或 MCP 工具调用约增加 30 毫秒。
@@ -328,11 +334,11 @@ key 标记为敏感信息，保存在系统钥匙串中，不会写入插件文�
 
 ## 方案文件
 
-独立模式的方案保存在 `docs/plans/`，浏览器测试截图保存在 `docs/plans/browser-artifacts/`。`/req-analysis` 和 `/req-bugfix` 写入前会检查方案是否会被提交；需要时只在本机 `.git/info/exclude` 中忽略。Superpowers 模式下的前端补充写回 Superpowers 计划文件，保持计划与任务执行者可见；截图等临时证据仍可留在本机忽略目录。
+独立模式的方案保存在 `docs/plans/`，浏览器测试截图保存在 `docs/plans/browser-artifacts/`，参考项目和设计图的读取报告保存在 `docs/plans/context/`。`/req-analysis` 和 `/req-bugfix` 写入前会检查方案是否会被提交；需要时只在本机 `.git/info/exclude` 中忽略。Superpowers 模式下的前端补充写回 Superpowers 计划文件，保持计划与任务执行者可见；截图等临时证据仍可留在本机忽略目录。
 
 ## 维护说明
 
-`req-analysis`、`req-bugfix` 和 `req-test` 共用的规则放在 `references/` 里，各只有一份：进入 worktree 和环境检查（`worktree-setup.md`）、检查命令识别和浏览器测试条件（`project-inventory.md`）、风险等级、处理用户的答复和“需要特别确认的事项”的触发条件（`analysis-common.md`）、方案文件的 git 忽略判断和状态取值（`plan-file.md`）、查询第三方库文档（`third-party-docs.md`）；Superpowers 计划补充规则在 `frontend-quality-supplement.md`。改这些规则时只改对应的文件。
+`req-analysis`、`req-bugfix` 和 `req-test` 共用的规则放在 `references/` 里，各只有一份：进入 worktree 和环境检查（`worktree-setup.md`）、检查命令识别和浏览器测试条件（`project-inventory.md`）、风险等级、处理用户的答复和“需要特别确认的事项”的触发条件（`analysis-common.md`）、方案文件的 git 忽略判断和状态取值（`plan-file.md`）、查询第三方库文档（`third-party-docs.md`）、调用资料读取子代理（`context-reader.md`）；Superpowers 计划补充规则在 `frontend-quality-supplement.md`。改这些规则时只改对应的文件。
 
 技能正文引用规则文件时一律写 `${CLAUDE_PLUGIN_ROOT}/references/<文件名>`，加载技能时会替换成实际路径。四个长流程的技能（`req-analysis`、`req-bugfix`、`req-implement`、`req-test`）和 `unattended` 开头都有“上下文被压缩之后”一节，新增规则文件时记得在那一节里点名。“项目规则”包括哪些文件，在五个 `req-*` 技能、`unattended`、`unattended-plan` 和四个子代理里各写了一遍，修改时要同步。
 

@@ -2,7 +2,7 @@
 name: req-plan-reviewer
 description: 独立方案审核员。由 /req-analysis 和 /req-bugfix 在方案文件保存后、交给用户审批前调用，对照代码核实方案并提出改进意见；也审核 Superpowers 计划及其前端补充。只读，不修改任何文件。
 tools: Read, Grep, Glob, Bash
-model: fable
+model: opus
 effort: high
 ---
 

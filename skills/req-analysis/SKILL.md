@@ -74,6 +74,8 @@ argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | S
 
 ## 阶段一：分析
 
+需求提到要参考另一个项目的源码，或附了 UI 设计图时，先读 `${CLAUDE_PLUGIN_ROOT}/references/context-reader.md`，按其中的标准判断自己读还是交给 req-context-reader 子代理，读到的结论用于下面的第 4、5、7 项和阶段二。没有参考项目和设计图时跳过，不用读取该文件。
+
 输出以下内容：
 
 1. 需求复述：一两句话。
@@ -89,6 +91,7 @@ argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | S
    可用的检查命令和浏览器测试条件：按 `${CLAUDE_PLUGIN_ROOT}/references/project-inventory.md` 逐项查明并写出。
    拿不准的写成待确认事项。
 8. 风险等级（初评）：按 `${CLAUDE_PLUGIN_ROOT}/references/analysis-common.md` 的“风险等级”逐项对照，取最高的一项作为等级。
+9. 参考资料：调用了 req-context-reader 时，列出报告路径和要点，报告中“不确定”的项按 `context-reader.md` 处理；自己读的，列出读了哪些文件的哪几行。没有参考项目和设计图时写“无”。
 
 如果歧义大到无法确定修改位置，输出到第 3 项就停下（之后的补全见“处理用户的答复”）。
 
@@ -104,7 +107,7 @@ argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | S
 
 ## 阶段二：方案审核单
 
-在所有待确认事项都为“已答复”或“按假设处理”，且阶段一的第 1～8 项都已输出之后进行。
+在所有待确认事项都为“已答复”或“按假设处理”，且阶段一的第 1～9 项都已输出之后进行。
 
 开头先列出“需要特别确认的事项”：按 `${CLAUDE_PLUGIN_ROOT}/references/analysis-common.md` 的同名一节逐项对照，命中的逐项说明原因，没有就写“无”。项目没有测试框架时，不要自行安装，而是在这里提出，等用户决定。
 
@@ -159,6 +162,7 @@ argument-hint: "[--auto] [--worktree=<名字> --base=<起点>] [需求原文 | S
 - 待确认事项及答复（Q 编号，逐条写明状态：已答复 + 答复内容，或按假设处理 + 假设内容）
 - 风险等级（初评、复核结果及依据）
 - 测试现状
+- 参考资料：按 `context-reader.md` 的“写进方案文件”填写；没有时写“无”
 - 需要特别确认的事项
 - 阶段二的全部内容（0～9 项）
 - 方案依据的代码版本：执行 `git rev-parse --short HEAD` 记录当前提交号；不是 git 仓库时写“无（非 git 仓库）”

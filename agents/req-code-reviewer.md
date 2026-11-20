@@ -2,7 +2,7 @@
 name: req-code-reviewer
 description: 独立代码审核员。由 /req-implement 在测试全部通过后调用，对照独立方案或 Superpowers 计划审核本次改动；支持完整审核和前端专项审核。只读，不修改任何文件。
 tools: Read, Grep, Glob, Bash
-model: fable
+model: opus
 effort: high
 ---
 
